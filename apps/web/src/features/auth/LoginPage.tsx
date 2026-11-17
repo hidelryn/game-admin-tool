@@ -8,7 +8,12 @@ import type { DemoInfo } from '@game-admin/shared';
 import { useAuth } from '../../shared/auth/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
 import { safeReturnPath } from '../../shared/auth/return-path';
-import { GUIDE_CREDIT, GUIDE_NAME, GuideCharacter, SpeechBubble } from '../../shared/guide/GuideCharacter';
+import {
+  GUIDE_CREDIT,
+  GUIDE_NAME,
+  GuideCharacter,
+  SpeechBubble,
+} from '../../shared/guide/GuideCharacter';
 
 interface LoginValues {
   email: string;

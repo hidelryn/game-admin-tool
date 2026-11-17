@@ -35,7 +35,9 @@ export function GuideCharacter({
   const ref = useRef<HTMLDivElement>(null);
   const handle = useRef<Awaited<ReturnType<typeof attachHaru>> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
-  const [width, setWidth] = useState<number>(frame === 'bust' ? Math.round(size * 0.9) : Math.round(size * 0.6));
+  const [width, setWidth] = useState<number>(
+    frame === 'bust' ? Math.round(size * 0.9) : Math.round(size * 0.6),
+  );
 
   useEffect(() => {
     const el = ref.current;

@@ -33,7 +33,8 @@ let stagePromise: Promise<Stage> | null = null;
 let owner: symbol | null = null;
 
 function loadCubismCore(): Promise<void> {
-  if ((window as unknown as { Live2DCubismCore?: unknown }).Live2DCubismCore) return Promise.resolve();
+  if ((window as unknown as { Live2DCubismCore?: unknown }).Live2DCubismCore)
+    return Promise.resolve();
   corePromise ??= new Promise<void>((resolve, reject) => {
     const s = document.createElement('script');
     s.src = CUBISM_CORE_URL;
