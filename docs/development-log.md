@@ -826,3 +826,10 @@ API 변경 없음. 화면 placeholder(ComingSoon) 전부 실제 화면으로 교
 
 - 사용자 결정: 체험 계정도 토큰 발급 허용 (제한 걸고). 조회 권한만 · 다음 초기화까지 · 동시 20개 · IP 당 시간당 3회 · 초기화 때 삭제
 - 발급 횟수 제한은 기존 Redis 고정 윈도 rate limit 재사용, 체험 계정일 때만 적용
+
+### 체험 모드 가상 활동 (worker)
+
+- 문제: 운영 환경은 내부 게임 API 가 꺼져 있어 시뮬레이터를 못 돌림 → 체험 사이트 대시보드 "오늘" 이 비어 보임
+- 해결: `DEMO_MODE` 일 때만 worker `demo-activity`(5분)가 시뮬레이터 한 틱과 같은 동작을 서비스 계층으로 직접 실행. 내부 API 는 계속 꺼둠
+- 회원 샘플·이벤트 기록 로직을 `internal-game/game-actions.ts` 로 빼서 내부 API 와 공유
+- 규모: `DEMO_ACTIVITY_USERS`(기본 30, 0=끔)

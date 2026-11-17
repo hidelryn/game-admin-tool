@@ -1,9 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { Router, type RequestHandler } from 'express';
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   liveOpsQuerySchema,
-  ActivityType,
   ErrorCode,
   gameClaimRequestSchema,
   gameCurrencyRequestSchema,
@@ -12,19 +11,18 @@ import {
   idParamSchema,
   publicIdSchema,
   sampleUsersQuerySchema,
-  UserStatus,
-  type GameEventsResult,
   type LiveOpsView,
 } from '@game-admin/shared';
 import { BusinessRuleError, UnauthorizedError } from '../../common/errors/app-error.js';
 import type { Executor } from '../../infra/db/types.js';
-import { rankingSeasons, userActivityLogs, users } from '../../infra/db/schema/index.js';
+import { rankingSeasons } from '../../infra/db/schema/index.js';
 import type { CurrencyService } from '../currencies/currency.service.js';
 import type { MailService } from '../mails/mail.service.js';
 import type { RankingService } from '../rankings/ranking.service.js';
 import type { ScheduleService } from '../schedules/schedule.service.js';
 import type { MaintenanceService } from '../live-notices/maintenance.service.js';
 import type { NoticeService } from '../live-notices/notice.service.js';
+import { recordGameEvents, sampleActiveUsers } from './game-actions.js';
 
 /**
  * 게임 서버 역할을 대신하는 내부 API (api-specification.md 2.12)
@@ -64,68 +62,16 @@ export function internalGameRouter(deps: {
   };
   router.use('/internal/game', requireKey);
 
-  /** 활동 중인 회원 무작위 샘플 (id 구간에서 시작점을 랜덤으로) */
+  /** 활동 중인 회원 무작위 샘플 */
   router.get('/internal/game/users/sample', async (req, res) => {
     const { size } = sampleUsersQuerySchema.parse(req.query);
-    const [{ maxId } = { maxId: 0 }] = await db
-      .select({ maxId: sql<number>`coalesce(max(${users.id}), 0)` })
-      .from(users);
-    const startId = Math.floor(Math.random() * Math.max(1, Number(maxId) - size));
-    const rows = await db
-      .select({ publicId: users.publicId })
-      .from(users)
-      .where(and(eq(users.status, UserStatus.ACTIVE), gte(users.id, startId)))
-      .orderBy(users.id)
-      .limit(size);
-    res.json({ data: rows.map((r) => r.publicId) });
+    res.json({ data: await sampleActiveUsers(db, size) });
   });
 
-  /** 활동 이벤트 기록. 정지·탈퇴 회원은 거부 (정지가 실제로 게임 접속을 막는 것처럼) */
+  /** 활동 이벤트 기록. 정지·탈퇴 회원은 거부 (정지가 실제로 게임 접속을 막는 것처럼), 점검 중엔 예외 회원만 */
   router.post('/internal/game/events', async (req, res) => {
     const { events } = gameEventsRequestSchema.parse(req.body);
-    const ids = [...new Set(events.map((e) => e.publicId))];
-    // 점검 중: 예외 회원만 통과, 전원 막히면 503
-    const blocked = await maintenanceService.blockedOf(ids);
-    const found = await db
-      .select({ id: users.id, publicId: users.publicId, status: users.status })
-      .from(users)
-      .where(inArray(users.publicId, ids));
-    const byPublicId = new Map(found.map((u) => [u.publicId, u]));
-    const result: GameEventsResult = { accepted: 0, rejected: [] };
-    const rows: (typeof userActivityLogs.$inferInsert)[] = [];
-    const logins = new Map<number, Date>();
-    for (const e of events) {
-      if (blocked.has(e.publicId)) {
-        result.rejected.push({ publicId: e.publicId, reason: 'MAINTENANCE' });
-        continue;
-      }
-      const u = byPublicId.get(e.publicId);
-      if (!u) {
-        result.rejected.push({ publicId: e.publicId, reason: 'USER_NOT_FOUND' });
-        continue;
-      }
-      if (u.status !== UserStatus.ACTIVE) {
-        result.rejected.push({ publicId: e.publicId, reason: `USER_${u.status}` });
-        continue;
-      }
-      const at = e.occurredAt ?? new Date();
-      rows.push({ userId: u.id, type: e.type, payload: e.payload ?? null, occurredAt: at });
-      if (e.type === ActivityType.LOGIN && (!logins.get(u.id) || at > logins.get(u.id)!))
-        logins.set(u.id, at);
-    }
-    if (rows.length) {
-      await db.transaction(async (tx) => {
-        await tx.insert(userActivityLogs).values(rows);
-        for (const [userId, at] of logins) {
-          await tx
-            .update(users)
-            .set({ lastLoginAt: sql`greatest(coalesce(${users.lastLoginAt}, ${at}), ${at})` })
-            .where(eq(users.id, userId));
-        }
-      });
-    }
-    result.accepted = rows.length;
-    res.json({ data: result });
+    res.json({ data: await recordGameEvents(db, maintenanceService, events) });
   });
 
   router.post('/internal/game/scores', async (req, res) => {

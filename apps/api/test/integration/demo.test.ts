@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { loadEnv } from '../../src/config/env.js';
 import { DEMO_TOKEN_ISSUE_PER_HOUR, DEMO_TOKEN_MAX_ACTIVE } from '@game-admin/shared';
-import { admins, apiTokens, auditLogs, notices, users } from '../../src/infra/db/schema/index.js';
+import {
+  admins,
+  apiTokens,
+  auditLogs,
+  currencyTransactions,
+  notices,
+  users,
+} from '../../src/infra/db/schema/index.js';
+import { runDemoActivity } from '../../src/modules/demo/demo-activity.js';
 import { generateApiToken } from '../../src/modules/auth/tokens.js';
 import { createPasswordHasher } from '../../src/modules/auth/password.js';
 import {
@@ -204,6 +212,50 @@ describe('체험 계정 API 토큰 (MCP 체험)', () => {
     const res = await issue(accessToken, ['user:read']);
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe('TOKEN_LIMIT_EXCEEDED');
+  });
+});
+
+describe('가상 활동 (worker demo-activity)', () => {
+  it('활동 회원이 접속하고 재화를 얻어 대시보드 오늘 재화 흐름에 잡힌다', async () => {
+    const created = await Promise.all(Array.from({ length: 5 }, () => createUser(t.ctx.db.db)));
+    const r = await runDemoActivity({ db: t.ctx.db.db, ...t.services }, { users: 5 });
+    expect(r.skipped).toBeUndefined();
+    expect(r.users).toBe(5);
+    expect(r.logins).toBe(5);
+    expect(r.earned).toBeGreaterThanOrEqual(5); // 골드 획득은 매번
+    expect(r.errors).toBe(0);
+
+    const ids = created.map((u) => u.id);
+    const ledger = await t.ctx.db.db
+      .select({ userId: currencyTransactions.userId, source: currencyTransactions.source })
+      .from(currencyTransactions)
+      .where(inArray(currencyTransactions.userId, ids));
+    expect(ledger.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(ledger.map((l) => l.source))).toEqual(new Set(['GAME']));
+
+    const op = (await login(t.app, ADMIN.operator)).accessToken;
+    const summary = await request(t.app).get('/api/v1/dashboard/summary').set(bearer(op));
+    expect(summary.status).toBe(200);
+    const gold = summary.body.data.today.currencies.find(
+      (c: { currencyCode: string }) => c.currencyCode === 'GOLD',
+    );
+    expect(gold.issued).toBeGreaterThan(0);
+    expect(summary.body.data.today.dau).toBeGreaterThanOrEqual(5);
+  });
+
+  it('점검 중이면 쉰다', async () => {
+    const r = await runDemoActivity(
+      {
+        ...t.services,
+        db: t.ctx.db.db,
+        maintenanceService: {
+          ...t.services.maintenanceService,
+          state: async () => ({ ...(await t.services.maintenanceService.state()), active: true }),
+        },
+      },
+      { users: 5 },
+    );
+    expect(r.skipped).toBe('maintenance');
   });
 });
 

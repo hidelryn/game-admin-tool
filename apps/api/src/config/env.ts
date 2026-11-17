@@ -83,6 +83,8 @@ const EnvSchema = z
       .optional()
       .or(z.literal('').transform(() => undefined)),
     DEMO_DAILY_RESET: bool.default('false'),
+    /** 체험 모드 가상 활동: 5분마다 이만큼의 회원이 접속·재화 획득/소비 (0 = 끔). DEMO_MODE 일 때만 */
+    DEMO_ACTIVITY_USERS: z.coerce.number().int().min(0).max(200).default(30),
   })
   .superRefine((v, ctx) => {
     if (v.DEMO_MODE && !passwordPolicySchema.safeParse(v.DEMO_ACCOUNT_PASSWORD).success) {

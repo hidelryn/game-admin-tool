@@ -11,6 +11,7 @@ import { statDateOf } from './common/time.js';
 import { createPasswordHasher } from './modules/auth/password.js';
 import { createLocalAssetStorage } from './infra/storage/asset-storage.js';
 import { ensureDemoAccount, resetDemoData } from './modules/demo/demo.service.js';
+import { runDemoActivity } from './modules/demo/demo-activity.js';
 
 /**
  * 백그라운드 작업 프로세스 (architecture.md 1.2)
@@ -82,6 +83,10 @@ const jobs: Record<string, (job: Job) => Promise<unknown>> = {
       hasher,
     });
   },
+  /** 체험 모드 가상 활동 (5분) — 운영 환경엔 시뮬레이터가 없으니 대시보드 "오늘" 을 움직이게 */
+  async 'demo-activity'() {
+    return runDemoActivity({ db: db.db, ...services }, { users: env.DEMO_ACTIVITY_USERS });
+  },
   /** 진행 중 시즌 랭킹 재구성 (10분) — Redis 동기화 실패 등으로 어긋난 부분 자가 복구 */
   async 'ranking-reconcile'() {
     return { seasons: await services.rankingService.reconcileActive() };
@@ -109,6 +114,11 @@ if (env.DEMO_MODE && env.DEMO_DAILY_RESET) {
   );
 } else {
   await queue.removeJobScheduler('demo-reset');
+}
+if (env.DEMO_MODE && env.DEMO_ACTIVITY_USERS > 0) {
+  await queue.upsertJobScheduler('demo-activity', { every: 5 * 60_000 }, { name: 'demo-activity' });
+} else {
+  await queue.removeJobScheduler('demo-activity');
 }
 // 승인 기능 제거(2026-11-16): 예전에 등록된 스케줄이 Redis 에 남아 있으면 지운다
 await queue.removeJobScheduler('approvals-maintenance');
