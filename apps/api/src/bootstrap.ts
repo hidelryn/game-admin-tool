@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { DEMO_TOKEN_ISSUE_PER_HOUR } from '@game-admin/shared';
 import type { Env } from './config/env.js';
 import type { Logger } from './common/logger.js';
 import type { DbHandle } from './infra/db/client.js';
@@ -36,6 +37,7 @@ import { assetsRouter } from './modules/assets/assets.router.js';
 import { createScheduleService } from './modules/schedules/schedule.service.js';
 import { createNamedLock } from './infra/db/named-lock.js';
 import { isDemoEmail } from './modules/demo/is-demo.js';
+import { nextResetAt } from './modules/demo/demo-info.js';
 import { demoRouter } from './modules/demo/demo.router.js';
 import { schedulesRouter } from './modules/schedules/schedules.router.js';
 import { createMaintenanceService } from './modules/live-notices/maintenance.service.js';
@@ -109,7 +111,11 @@ export function buildServices(ctx: AppContext) {
     idempotency,
     authService: createAuthService({ db, redis: ctx.redis, env, logger, hasher, tokens }),
     adminService: createAdminService({ db, hasher }),
-    apiTokenService: createApiTokenService({ db, isDemo: (email) => isDemoEmail(env, email) }),
+    apiTokenService: createApiTokenService({
+      db,
+      isDemo: (email) => isDemoEmail(env, email),
+      demoExpiresBy: (now) => (env.DEMO_DAILY_RESET ? nextResetAt(now) : null),
+    }),
     userService: createUserService({ db, confirmation }),
     currencyService: createCurrencyService({ db, confirmation }),
     mailService,
@@ -150,7 +156,21 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
       authenticate,
     }),
   );
-  api.use(apiTokensRouter({ apiTokenService: s.apiTokenService, authenticate }));
+  const demoTokenLimit = createRateLimit({
+    redis: ctx.redis,
+    logger,
+    name: 'demo-token-issue',
+    limit: DEMO_TOKEN_ISSUE_PER_HOUR,
+    windowSec: 3600,
+  });
+  api.use(
+    apiTokensRouter({
+      apiTokenService: s.apiTokenService,
+      authenticate,
+      demoIssueLimit: (req, res, next) =>
+        req.auth && isDemoEmail(env, req.auth.email) ? demoTokenLimit(req, res, next) : next(),
+    }),
+  );
   api.use(usersRouter({ userService: s.userService, authenticate }));
   api.use(currenciesRouter({ currencyService: s.currencyService, idempotency, authenticate }));
   api.use(mailsRouter({ mailService: s.mailService, idempotency, authenticate }));

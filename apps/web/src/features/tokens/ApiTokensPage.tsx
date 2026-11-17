@@ -23,6 +23,9 @@ import dayjs from 'dayjs';
 import {
   API_TOKEN_MAX_ACTIVE,
   API_TOKEN_MAX_DAYS,
+  DEMO_TOKEN_ISSUE_PER_HOUR,
+  DEMO_TOKEN_MAX_ACTIVE,
+  DEMO_TOKEN_PERMISSIONS,
   TOKEN_ASSIGNABLE_PERMISSIONS,
   type ApiTokenSummary,
   type CreatedApiToken,
@@ -60,6 +63,7 @@ export function ApiTokensPage() {
     queryFn: async () => (await api.get<ApiTokenSummary[]>('/me/api-tokens')).data,
   });
   const activeCount = tokens.data?.filter(isActive).length ?? 0;
+  const maxActive = me?.isDemo ? DEMO_TOKEN_MAX_ACTIVE : API_TOKEN_MAX_ACTIVE;
 
   async function revoke(t: ApiTokenSummary) {
     const ok = await modal.confirm({
@@ -86,15 +90,13 @@ export function ApiTokensPage() {
         extra={
           <Tooltip
             title={
-              activeCount >= API_TOKEN_MAX_ACTIVE
-                ? `사용 중인 토큰은 ${API_TOKEN_MAX_ACTIVE}개까지입니다`
-                : undefined
+              activeCount >= maxActive ? `사용 중인 토큰은 ${maxActive}개까지입니다` : undefined
             }
           >
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              disabled={activeCount >= API_TOKEN_MAX_ACTIVE || me?.isDemo}
+              disabled={activeCount >= maxActive}
               onClick={() => setCreateOpen(true)}
             >
               토큰 발급
@@ -107,8 +109,8 @@ export function ApiTokensPage() {
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message="체험 계정은 API 토큰을 발급할 수 없습니다"
-          description="공개 계정이라 토큰이 새어 나가지 않도록 막아 두었습니다. AI(MCP) 연결 방식은 README 의 'MCP 서버 연결'을 참고하세요."
+          message="체험 계정 토큰은 조회 권한만, 다음 초기화(매일 04:00)까지 쓸 수 있습니다"
+          description={`여러 방문자가 같은 계정을 쓰므로 목록에 다른 방문자의 토큰도 보입니다. 체험 계정 전체 ${DEMO_TOKEN_MAX_ACTIVE}개까지, 발급은 시간당 ${DEMO_TOKEN_ISSUE_PER_HOUR}회까지이고 초기화 때 모두 삭제됩니다. MCP 클라이언트 연결 방법은 README 의 'MCP 서버 연결'을 참고하세요.`}
         />
       )}
       <Alert
@@ -182,7 +184,8 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose(): void })
   const [form] = Form.useForm<{ name: string; permissions: Permission[]; expiresInDays: number }>();
   const [loading, setLoading] = useState(false);
   const { modal, message } = App.useApp();
-  const { can } = useAuth();
+  const { can, me } = useAuth();
+  const isDemo = !!me?.isDemo;
   const queryClient = useQueryClient();
 
   async function submit() {
@@ -253,6 +256,7 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose(): void })
             <Row gutter={[8, 4]}>
               {PERMISSION_GROUPS.flatMap((g) => g.permissions).map((p) => {
                 const assignable = TOKEN_ASSIGNABLE_PERMISSIONS.includes(p);
+                const demoBlocked = isDemo && !DEMO_TOKEN_PERMISSIONS.includes(p);
                 const mine = can(p);
                 return (
                   <Col span={12} key={p}>
@@ -260,12 +264,14 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose(): void })
                       title={
                         !assignable
                           ? '토큰에 줄 수 없는 권한 (웹에서 사람만 수행)'
-                          : !mine
-                            ? '내 권한에 없음'
-                            : undefined
+                          : demoBlocked
+                            ? '체험 계정 토큰은 조회 권한만'
+                            : !mine
+                              ? '내 권한에 없음'
+                              : undefined
                       }
                     >
-                      <Checkbox value={p} disabled={!assignable || !mine}>
+                      <Checkbox value={p} disabled={!assignable || demoBlocked || !mine}>
                         {PERMISSION_LABEL[p]}
                       </Checkbox>
                     </Tooltip>
@@ -279,6 +285,7 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose(): void })
           name="expiresInDays"
           label="유효기간"
           rules={[{ required: true, type: 'number', min: 1, max: API_TOKEN_MAX_DAYS }]}
+          hidden={isDemo}
         >
           <InputNumber<number>
             min={1}
@@ -287,6 +294,11 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose(): void })
             style={{ width: 140 }}
           />
         </Form.Item>
+        {isDemo && (
+          <Typography.Text type="secondary">
+            유효기간: 다음 초기화(매일 04:00)까지 자동으로 정해집니다.
+          </Typography.Text>
+        )}
       </Form>
     </Modal>
   );

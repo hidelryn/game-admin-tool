@@ -1,10 +1,27 @@
 import { z } from 'zod';
-import type { Permission } from '../permissions.js';
+import { Permission } from '../permissions.js';
 import { permissionSchema } from './admins.js';
 import { uniqueBy } from './common.js';
 
 export const API_TOKEN_MAX_ACTIVE = 5;
 export const API_TOKEN_MAX_DAYS = 90;
+
+/**
+ * 공개 체험 계정 토큰 제한 (docs/demo-mode.md)
+ * - 권한은 조회만, 만료는 다음 초기화(04:00 KST)까지, 체험 계정 전체 합쳐 동시 20개, 발급은 IP 당 시간당 3회
+ */
+export const DEMO_TOKEN_PERMISSIONS: readonly Permission[] = [
+  Permission.DASHBOARD_READ,
+  Permission.USER_READ,
+  Permission.CURRENCY_READ,
+  Permission.MAIL_READ,
+  Permission.RANKING_READ,
+  Permission.AUDIT_READ,
+  Permission.SCHEDULE_READ,
+  Permission.NOTICE_READ,
+];
+export const DEMO_TOKEN_MAX_ACTIVE = 20;
+export const DEMO_TOKEN_ISSUE_PER_HOUR = 3;
 
 export const createApiTokenRequestSchema = z.object({
   name: z.string().trim().min(2).max(50),

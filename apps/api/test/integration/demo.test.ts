@@ -2,7 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { and, eq } from 'drizzle-orm';
 import { loadEnv } from '../../src/config/env.js';
-import { admins, auditLogs, notices, users } from '../../src/infra/db/schema/index.js';
+import { DEMO_TOKEN_ISSUE_PER_HOUR, DEMO_TOKEN_MAX_ACTIVE } from '@game-admin/shared';
+import { admins, apiTokens, auditLogs, notices, users } from '../../src/infra/db/schema/index.js';
+import { generateApiToken } from '../../src/modules/auth/tokens.js';
 import { createPasswordHasher } from '../../src/modules/auth/password.js';
 import {
   ensureDemoAccount,
@@ -114,7 +116,7 @@ describe('체험 계정', () => {
     expect(body.data.admin.isDemo).toBe(false);
   });
 
-  it('비밀번호 변경·API 토큰 발급은 막힌다', async () => {
+  it('비밀번호 변경은 막힌다', async () => {
     const { accessToken } = await demoLogin();
     const pw = await request(t.app)
       .patch('/api/v1/auth/me/password')
@@ -123,12 +125,6 @@ describe('체험 계정', () => {
       .send({ currentPassword: DEMO_PASSWORD, newPassword: 'hijacked12345' });
     expect(pw.status).toBe(403);
     expect(pw.body.error.code).toBe('DEMO_RESTRICTED');
-    const tok = await request(t.app)
-      .post('/api/v1/me/api-tokens')
-      .set(bearer(accessToken))
-      .send({ name: 'demo-token', permissions: ['user:read'] });
-    expect(tok.status).toBe(403);
-    expect(tok.body.error.code).toBe('DEMO_RESTRICTED');
     // 여전히 원래 비밀번호로 로그인된다
     await demoLogin();
   });
@@ -150,6 +146,64 @@ describe('체험 계정', () => {
     await ensureDemoAccount({ db: plain.ctx.db.db, env: plain.ctx.env, hasher });
     const [row] = await plain.ctx.db.db.select().from(admins).where(eq(admins.email, DEMO_EMAIL));
     expect(row).toBeUndefined(); // DEMO_MODE 가 꺼져 있으면 만들지도 않는다
+  });
+});
+
+describe('체험 계정 API 토큰 (MCP 체험)', () => {
+  const issue = (accessToken: string, permissions: string[], name = 'visitor-mcp') =>
+    request(t.app)
+      .post('/api/v1/me/api-tokens')
+      .set(bearer(accessToken))
+      .send({ name, permissions, expiresInDays: 30 });
+
+  it('조회 권한만, 만료는 다음 초기화까지, 발급한 토큰으로 조회가 된다', async () => {
+    const { accessToken } = await demoLogin();
+    const write = await issue(accessToken, ['user:read', 'currency:grant']);
+    expect(write.status).toBe(422);
+    expect(write.body.error.code).toBe('TOKEN_PERMISSION_NOT_ALLOWED');
+
+    const ok = await issue(accessToken, ['user:read']);
+    expect(ok.status).toBe(201);
+    expect(new Date(ok.body.data.expiresAt).getTime()).toBeLessThanOrEqual(nextResetAt().getTime());
+    const list = await request(t.app).get('/api/v1/users').set(bearer(ok.body.data.token));
+    expect(list.status).toBe(200);
+  });
+
+  it('발급은 IP 당 시간당 3회', async () => {
+    const { accessToken } = await demoLogin();
+    for (let i = 0; i < DEMO_TOKEN_ISSUE_PER_HOUR; i++) {
+      expect((await issue(accessToken, ['user:read'], `v${i}-mcp`)).status).toBe(201);
+    }
+    const over = await issue(accessToken, ['user:read']);
+    expect(over.status).toBe(429);
+    // 다른 운영자는 이 제한을 받지 않는다
+    const op = (await login(t.app, ADMIN.operator)).accessToken;
+    expect((await issue(op, ['user:read'])).status).toBe(201);
+  });
+
+  it('체험 계정 토큰은 동시에 20개까지', async () => {
+    const [demo] = await t.ctx.db.db
+      .select({ id: admins.id })
+      .from(admins)
+      .where(eq(admins.email, DEMO_EMAIL));
+    const future = new Date(Date.now() + 3_600_000);
+    await t.ctx.db.db.insert(apiTokens).values(
+      Array.from({ length: DEMO_TOKEN_MAX_ACTIVE }, (_, i) => {
+        const { prefix, secretHash } = generateApiToken();
+        return {
+          adminId: demo!.id,
+          name: `seeded-${i}`,
+          prefix,
+          secretHash,
+          permissions: ['user:read'],
+          expiresAt: future,
+        };
+      }),
+    );
+    const { accessToken } = await demoLogin();
+    const res = await issue(accessToken, ['user:read']);
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('TOKEN_LIMIT_EXCEEDED');
   });
 });
 
@@ -179,6 +233,13 @@ describe('매일 초기화', () => {
       .from(admins)
       .where(eq(admins.email, ADMIN.operator));
 
+    const demoAccess = (await demoLogin()).accessToken;
+    await request(t.app)
+      .post('/api/v1/me/api-tokens')
+      .set(bearer(demoAccess))
+      .send({ name: 'visitor-mcp', permissions: ['user:read'] })
+      .expect(201);
+
     const r = await resetDemoData({
       db: t.ctx.db,
       redis: t.ctx.redis,
@@ -189,6 +250,8 @@ describe('매일 초기화', () => {
       scale: 'small',
     });
     expect(r.files).toBe(1);
+    expect(r.demoTokens).toBe(1);
+    expect(await t.ctx.db.db.select().from(apiTokens)).toHaveLength(0);
 
     expect(await t.ctx.db.db.select().from(notices)).toHaveLength(0);
     expect((await t.ctx.db.db.select({ id: users.id }).from(users)).length).toBeGreaterThan(0);

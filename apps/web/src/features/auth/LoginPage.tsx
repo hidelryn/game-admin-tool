@@ -139,7 +139,7 @@ export function LoginPage() {
                 {demo.data?.nextResetAt
                   ? ` 매일 ${dayjs(demo.data.nextResetAt).format('HH:mm')}에 처음 상태로 돌아갑니다.`
                   : ' 주기적으로 처음 상태로 돌아갑니다.'}{' '}
-                비밀번호 변경·API 토큰 발급은 막혀 있습니다.
+                비밀번호 변경은 막혀 있고, AI(MCP) 연결용 토큰은 조회 권한으로만 발급됩니다.
               </Typography.Paragraph>
             </Card>
           )}

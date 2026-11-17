@@ -13,8 +13,11 @@ import type { ApiTokenService } from './api-token.service.js';
 export function apiTokensRouter(deps: {
   apiTokenService: ApiTokenService;
   authenticate: RequestHandler;
+  /** 체험 계정 발급 횟수 제한 (IP 기준). 체험 계정이 아니면 통과 */
+  demoIssueLimit?: RequestHandler;
 }): Router {
   const { apiTokenService, authenticate } = deps;
+  const demoIssueLimit: RequestHandler = deps.demoIssueLimit ?? ((_req, _res, next) => next());
   const router = Router();
   const guard = [
     authenticate,
@@ -26,7 +29,7 @@ export function apiTokensRouter(deps: {
     res.json({ data: await apiTokenService.listFor(req.auth!.adminId) });
   });
 
-  router.post('/me/api-tokens', ...guard, async (req, res) => {
+  router.post('/me/api-tokens', ...guard, demoIssueLimit, async (req, res) => {
     const input = createApiTokenRequestSchema.parse(req.body);
     res
       .status(201)

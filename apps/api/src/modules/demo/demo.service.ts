@@ -4,9 +4,10 @@ import { AuditAction, RoleCode } from '@game-admin/shared';
 import type { Env } from '../../config/env.js';
 import type { Logger } from '../../common/logger.js';
 import type { DbHandle } from '../../infra/db/client.js';
+import { affectedRows } from '../../infra/db/types.js';
 import type { RedisHandle } from '../../infra/redis/client.js';
 import type { AssetStorage } from '../../infra/storage/asset-storage.js';
-import { admins, roles } from '../../infra/db/schema/index.js';
+import { admins, apiTokens, roles } from '../../infra/db/schema/index.js';
 import { seedCore } from '../../infra/db/seed/core.js';
 import { seedGame, type SeedScale } from '../../infra/db/seed/game.js';
 import { backfill } from '../../jobs/kpi.js';
@@ -15,7 +16,7 @@ import type { PasswordHasher } from '../auth/password.js';
 
 /**
  * 체험 모드 (docs/demo-mode.md)
- * - 공개 체험 계정: 운영자 권한, 비밀번호 변경·API 토큰 발급 불가, 로그인 실패로 잠기지 않음(IP 제한은 유지)
+ * - 공개 체험 계정: 운영자 권한, 비밀번호 변경 불가, API 토큰은 조회 권한·다음 초기화까지만, 로그인 실패로 잠기지 않음(IP 제한은 유지)
  * - 매일 초기화: 운영 데이터 전부 지우고 기준·가상 데이터를 다시 넣는다 (운영자 계정·권한은 유지)
  */
 export const DEMO_ACCOUNT_NAME = '체험 운영자';
@@ -148,13 +149,26 @@ export async function resetDemoData(deps: {
   await seedCore(db.db, { adminPasswordHash: await hasher.hash(randomUUID()) });
   const game = await seedGame(db.db, { scale: deps.scale ?? 'small', now: deps.now });
   await ensureDemoAccount({ db: db.db, env, hasher });
+  // 방문자들이 발급한 체험 계정 토큰은 전부 지운다 (api_tokens 는 다른 운영자 것 때문에 표 자체는 남김)
+  const demoTokens = await deleteDemoTokens(db.db, env);
   await backfill(db.db, env.STAT_TZ_OFFSET_MINUTES, 60);
 
-  const result = { truncated, redisKeys, files, game, ms: Date.now() - started };
+  const result = { truncated, redisKeys, files, demoTokens, game, ms: Date.now() - started };
   await writeAudit(db.db, systemAuditContext(null, `demo-reset:${new Date().toISOString()}`), {
     action: AuditAction.DEMO_RESET,
     after: result,
   });
   logger.warn(result, 'demo data reset');
   return result;
+}
+
+/** 체험 계정의 API 토큰 삭제 — 지운 개수 */
+async function deleteDemoTokens(db: DbHandle['db'], env: Env): Promise<number> {
+  const [demo] = await db
+    .select({ id: admins.id })
+    .from(admins)
+    .where(eq(admins.email, env.DEMO_ACCOUNT_EMAIL))
+    .limit(1);
+  if (!demo) return 0;
+  return affectedRows(await db.delete(apiTokens).where(eq(apiTokens.adminId, demo.id)));
 }

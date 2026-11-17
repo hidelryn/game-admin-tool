@@ -76,7 +76,7 @@ const STOPS: Stop[] = [
     key: '/me/api-tokens',
     permission: Permission.TOKEN_MANAGE_OWN,
     title: 'API 토큰 · AI 연결',
-    text: 'AI 클라이언트(MCP)를 연결할 토큰을 발급해요. AI도 같은 권한·확인 절차를 거치고, 대규모 작업은 웹에서만 실행돼요. (체험 계정은 발급할 수 없어요)',
+    text: 'AI 클라이언트(MCP)를 연결할 토큰을 발급해요. AI도 같은 권한·확인 절차를 거치고, 대규모 작업은 웹에서만 실행돼요. (체험 계정은 조회 권한 토큰을 다음 초기화까지 쓸 수 있어요)',
   },
   {
     selector: '[data-tour="tour-button"]',

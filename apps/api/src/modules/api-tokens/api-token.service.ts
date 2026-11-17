@@ -4,6 +4,8 @@ import {
   AuditAction,
   AuditTargetType,
   Channel,
+  DEMO_TOKEN_MAX_ACTIVE,
+  DEMO_TOKEN_PERMISSIONS,
   ErrorCode,
   TOKEN_ASSIGNABLE_PERMISSIONS,
   type ApiTokenSummary,
@@ -39,10 +41,12 @@ const toSummary = (r: Row): ApiTokenSummary => ({
  */
 export function createApiTokenService(deps: {
   db: Executor;
-  /** 공개 체험 계정 판별 — 체험 계정은 토큰 발급 불가 */
+  /** 공개 체험 계정 판별 — 체험 계정 토큰은 조회 권한만·다음 초기화까지·동시 개수 제한 */
   isDemo?: (email: string) => boolean;
+  /** 체험 계정 토큰의 만료 상한 (다음 초기화 시각). null 이면 상한 없음 */
+  demoExpiresBy?: (now: Date) => Date | null;
 }) {
-  const { db, isDemo = () => false } = deps;
+  const { db, isDemo = () => false, demoExpiresBy = () => null } = deps;
 
   return {
     async listFor(adminId: number): Promise<ApiTokenSummary[]> {
@@ -65,19 +69,19 @@ export function createApiTokenService(deps: {
           'API 토큰은 웹 백오피스에서만 발급할 수 있습니다.',
         );
       }
-      if (isDemo(actor.email)) {
-        throw new ForbiddenError(
-          ErrorCode.DEMO_RESTRICTED,
-          '체험 계정은 API 토큰을 발급할 수 없습니다. MCP 연결은 docs/mcp-tools.md 를 참고하세요.',
-        );
-      }
+      const demo = isDemo(actor.email);
       const notAllowed = input.permissions.filter(
-        (p) => !actor.permissions.has(p) || !TOKEN_ASSIGNABLE_PERMISSIONS.includes(p),
+        (p) =>
+          !actor.permissions.has(p) ||
+          !TOKEN_ASSIGNABLE_PERMISSIONS.includes(p) ||
+          (demo && !DEMO_TOKEN_PERMISSIONS.includes(p)),
       );
       if (notAllowed.length) {
         throw new BusinessRuleError(
           ErrorCode.TOKEN_PERMISSION_NOT_ALLOWED,
-          '토큰에 부여할 수 없는 권한이 포함되어 있습니다.',
+          demo
+            ? '체험 계정 토큰에는 조회 권한만 줄 수 있습니다.'
+            : '토큰에 부여할 수 없는 권한이 포함되어 있습니다.',
           {
             notAllowed,
           },
@@ -95,15 +99,20 @@ export function createApiTokenService(deps: {
             gt(apiTokens.expiresAt, now),
           ),
         );
-      if ((active?.n ?? 0) >= API_TOKEN_MAX_ACTIVE) {
+      const maxActive = demo ? DEMO_TOKEN_MAX_ACTIVE : API_TOKEN_MAX_ACTIVE;
+      if ((active?.n ?? 0) >= maxActive) {
         throw new BusinessRuleError(
           ErrorCode.TOKEN_LIMIT_EXCEEDED,
-          `활성 토큰은 최대 ${API_TOKEN_MAX_ACTIVE}개까지입니다.`,
+          demo
+            ? `체험 계정 토큰이 이미 ${maxActive}개 사용 중입니다. 다음 초기화 후 다시 시도하세요.`
+            : `활성 토큰은 최대 ${maxActive}개까지입니다.`,
         );
       }
 
       const { token, prefix, secretHash } = generateApiToken();
-      const expiresAt = new Date(now.getTime() + input.expiresInDays * 86_400_000);
+      let expiresAt = new Date(now.getTime() + input.expiresInDays * 86_400_000);
+      const cap = demo ? demoExpiresBy(now) : null;
+      if (cap && cap < expiresAt) expiresAt = cap;
 
       const row = await db.transaction(async (tx) => {
         const [created] = await tx
