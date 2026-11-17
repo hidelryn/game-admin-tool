@@ -11,7 +11,12 @@ import {
 } from '@game-admin/shared';
 import type { Env } from '../../config/env.js';
 import type { Logger } from '../../common/logger.js';
-import { AppError, BusinessRuleError, UnauthorizedError } from '../../common/errors/app-error.js';
+import {
+  AppError,
+  BusinessRuleError,
+  ForbiddenError,
+  UnauthorizedError,
+} from '../../common/errors/app-error.js';
 import type { RedisHandle } from '../../infra/redis/client.js';
 import type { Executor } from '../../infra/db/types.js';
 import { affectedRows } from '../../infra/db/types.js';
@@ -26,6 +31,7 @@ import {
   revokeRefreshFamily,
   type AdminRecord,
 } from './admin.repository.js';
+import { isDemoEmail } from '../demo/is-demo.js';
 import type { AuthContext } from './auth-context.js';
 import type { PasswordHasher } from './password.js';
 import { newRefreshToken, sha256, type TokenService } from './tokens.js';
@@ -96,6 +102,7 @@ export function createAuthService(deps: AuthServiceDeps) {
       roleCode: admin.roleCode,
       permissions: sortedPermissions(perms),
       mustChangePassword: admin.mustChangePassword,
+      isDemo: isDemoEmail(env, admin.email),
       channel,
     };
   }
@@ -140,6 +147,11 @@ export function createAuthService(deps: AuthServiceDeps) {
           errorCode,
         });
 
+      if (!ok && isDemoEmail(env, admin.email)) {
+        // 공개 체험 계정은 잠그지 않는다 — 일부러 틀려서 다른 방문자를 막는 장난 방지 (IP 당 시도 제한은 그대로)
+        await failAudit(ErrorCode.INVALID_CREDENTIALS);
+        throw invalidCredentials();
+      }
       if (!ok) {
         const failed = admin.failedLoginCount + 1;
         const lock = failed >= MAX_FAILED_LOGINS;
@@ -291,11 +303,18 @@ export function createAuthService(deps: AuthServiceDeps) {
         permissions: sortedPermissions(auth.permissions),
         mustChangePassword: auth.mustChangePassword,
         channel: auth.channel,
+        isDemo: isDemoEmail(env, auth.email),
       };
     },
 
     /** 변경 후 모든 세션 종료 → 클라이언트는 다시 로그인 */
     async changePassword(auth: AuthContext, input: ChangePasswordRequest, audit: AuditContext) {
+      if (isDemoEmail(env, auth.email)) {
+        throw new ForbiddenError(
+          ErrorCode.DEMO_RESTRICTED,
+          '체험 계정은 비밀번호를 바꿀 수 없습니다. (다른 방문자도 같은 계정을 씁니다)',
+        );
+      }
       const admin = await findAdminById(db, auth.adminId);
       if (!admin) throw new UnauthorizedError();
       if (!(await hasher.verify(admin.passwordHash, input.currentPassword))) {

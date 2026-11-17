@@ -41,6 +41,16 @@ export interface MeResponse {
   permissions: Permission[];
   mustChangePassword: boolean;
   channel: Channel;
+  /** 공개 체험 계정 (비밀번호 변경·토큰 발급 불가, 매일 초기화) — docs/demo-mode.md */
+  isDemo: boolean;
+}
+
+/** 로그인 화면용 공개 안내 (GET /public/demo). 체험 모드가 꺼져 있으면 enabled=false 만 */
+export interface DemoInfo {
+  enabled: boolean;
+  accounts: { label: string; email: string; password: string; roleName: string }[];
+  /** 다음 초기화 시각 (매일 초기화를 켰을 때) */
+  nextResetAt: string | null;
 }
 
 export interface LoginResponse {

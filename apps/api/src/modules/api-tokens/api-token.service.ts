@@ -37,8 +37,12 @@ const toSummary = (r: Row): ApiTokenSummary => ({
  * - 발급은 WEB 에서만, 원문은 발급 응답에서 1회만 노출
  * - 부여 가능 권한 = 본인 현재 권한 ∩ TOKEN_ASSIGNABLE_PERMISSIONS
  */
-export function createApiTokenService(deps: { db: Executor }) {
-  const { db } = deps;
+export function createApiTokenService(deps: {
+  db: Executor;
+  /** 공개 체험 계정 판별 — 체험 계정은 토큰 발급 불가 */
+  isDemo?: (email: string) => boolean;
+}) {
+  const { db, isDemo = () => false } = deps;
 
   return {
     async listFor(adminId: number): Promise<ApiTokenSummary[]> {
@@ -59,6 +63,12 @@ export function createApiTokenService(deps: { db: Executor }) {
         throw new ForbiddenError(
           ErrorCode.CHANNEL_NOT_ALLOWED,
           'API 토큰은 웹 백오피스에서만 발급할 수 있습니다.',
+        );
+      }
+      if (isDemo(actor.email)) {
+        throw new ForbiddenError(
+          ErrorCode.DEMO_RESTRICTED,
+          '체험 계정은 API 토큰을 발급할 수 없습니다. MCP 연결은 docs/mcp-tools.md 를 참고하세요.',
         );
       }
       const notAllowed = input.permissions.filter(

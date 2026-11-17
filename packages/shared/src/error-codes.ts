@@ -69,6 +69,8 @@ export const ErrorCode = {
   MAINTENANCE_NOT_EDITABLE: 'MAINTENANCE_NOT_EDITABLE',
   NOTICE_NOT_FOUND: 'NOTICE_NOT_FOUND',
   NOTICE_NOT_EDITABLE: 'NOTICE_NOT_EDITABLE',
+  /** 공개 체험 계정으로는 할 수 없는 작업 (비밀번호 변경·토큰 발급) */
+  DEMO_RESTRICTED: 'DEMO_RESTRICTED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

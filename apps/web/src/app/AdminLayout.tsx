@@ -8,17 +8,19 @@ import {
   KeyOutlined,
   LogoutOutlined,
   MailOutlined,
+  QuestionCircleOutlined,
   NotificationOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Permission } from '@game-admin/shared';
 import { ROLE_LABEL } from '../shared/permission-labels';
 import { useAuth } from '../shared/auth/AuthProvider';
 import { MaintenanceBanner } from '../features/live-notices/MaintenanceBanner';
+import { GuideTour, markTourSeen, shouldAutoStartTour } from '../shared/guide/GuideTour';
 
 const { Sider, Header, Content } = Layout;
 
@@ -84,6 +86,17 @@ export function AdminLayout() {
     ({ key, label, icon }) => ({ key, icon, label }),
   );
   const selected = items.find((i) => pathname === i.key || pathname.startsWith(`${i.key}/`))?.key;
+  const [tourOpen, setTourOpen] = useState(false);
+  // 체험 계정은 처음 들어왔을 때 안내를 자동으로 한 번 (메뉴가 그려진 뒤)
+  useEffect(() => {
+    if (!me?.isDemo || !shouldAutoStartTour(me.id)) return;
+    const timer = setTimeout(() => setTourOpen(true), 600);
+    return () => clearTimeout(timer);
+  }, [me?.id, me?.isDemo]);
+  const closeTour = () => {
+    setTourOpen(false);
+    if (me) markTourSeen(me.id);
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -105,7 +118,20 @@ export function AdminLayout() {
         <Header
           style={{ background: '#fff', paddingInline: 24, borderBottom: '1px solid #f0f0f0' }}
         >
-          <Flex justify="flex-end" align="center" style={{ height: '100%' }}>
+          <Flex justify="flex-end" align="center" gap={8} style={{ height: '100%' }}>
+            {me?.isDemo && (
+              <Tag color="blue" style={{ marginInlineEnd: 0 }}>
+                체험 계정 · 매일 04:00 초기화
+              </Tag>
+            )}
+            <Button
+              type="text"
+              icon={<QuestionCircleOutlined />}
+              data-tour="tour-button"
+              onClick={() => setTourOpen(true)}
+            >
+              둘러보기
+            </Button>
             <Dropdown
               menu={{
                 items: [
@@ -115,7 +141,12 @@ export function AdminLayout() {
                     label: 'API 토큰',
                     disabled: !can(Permission.TOKEN_MANAGE_OWN),
                   },
-                  { key: 'password', icon: <UserOutlined />, label: '비밀번호 변경' },
+                  {
+                    key: 'password',
+                    icon: <UserOutlined />,
+                    label: me?.isDemo ? '비밀번호 변경 (체험 계정 불가)' : '비밀번호 변경',
+                    disabled: me?.isDemo,
+                  },
                   { type: 'divider' },
                   { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', danger: true },
                 ],
@@ -137,6 +168,7 @@ export function AdminLayout() {
           </Flex>
         </Header>
         <MaintenanceBanner />
+        <GuideTour open={tourOpen} onClose={closeTour} />
         <Content style={{ padding: 24 }}>
           <Outlet />
         </Content>

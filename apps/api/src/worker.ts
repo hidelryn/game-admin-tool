@@ -8,6 +8,9 @@ import { buildServices } from './bootstrap.js';
 import { releaseExpiredSuspensions } from './modules/users/user.service.js';
 import { aggregateDay, backfill } from './jobs/kpi.js';
 import { statDateOf } from './common/time.js';
+import { createPasswordHasher } from './modules/auth/password.js';
+import { createLocalAssetStorage } from './infra/storage/asset-storage.js';
+import { ensureDemoAccount, resetDemoData } from './modules/demo/demo.service.js';
 
 /**
  * 백그라운드 작업 프로세스 (architecture.md 1.2)
@@ -24,6 +27,19 @@ await redis
   .catch((err: Error) => logger.warn({ err: err.message }, 'redis initial connect failed'));
 
 const services = buildServices({ env, logger, db, redis });
+const hasher = createPasswordHasher({
+  memoryCost: env.ARGON2_MEMORY_KIB,
+  timeCost: env.ARGON2_TIME_COST,
+});
+
+// 체험 모드: 기동할 때 체험 계정을 env 값에 맞춘다 (비밀번호를 바꾸면 재시작으로 반영)
+if (env.DEMO_MODE) {
+  const r = await ensureDemoAccount({ db: db.db, env, hasher }).catch((err: Error) => {
+    logger.error({ err: err.message }, 'demo account setup failed');
+    return 'failed';
+  });
+  logger.warn({ result: r, email: env.DEMO_ACCOUNT_EMAIL }, 'demo mode enabled');
+}
 
 // BullMQ 는 keyPrefix 대신 prefix 옵션을 쓰고, 블로킹 명령을 위해 maxRetriesPerRequest=null 이 필요하다
 const connection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
@@ -55,6 +71,17 @@ const jobs: Record<string, (job: Job) => Promise<unknown>> = {
   async 'maintenance-lifecycle'() {
     return services.maintenanceService.runLifecycle();
   },
+  /** ⚠️ 체험 서버 매일 초기화 (04:00 KST) — DEMO_MODE·DEMO_DAILY_RESET 둘 다 켰을 때만 등록 */
+  async 'demo-reset'() {
+    return resetDemoData({
+      db,
+      redis,
+      env,
+      logger,
+      storage: createLocalAssetStorage(env.ASSET_STORAGE_DIR),
+      hasher,
+    });
+  },
   /** 진행 중 시즌 랭킹 재구성 (10분) — Redis 동기화 실패 등으로 어긋난 부분 자가 복구 */
   async 'ranking-reconcile'() {
     return { seasons: await services.rankingService.reconcileActive() };
@@ -74,6 +101,15 @@ await queue.upsertJobScheduler(
   { every: 60_000 },
   { name: 'release-expired-suspensions' },
 );
+if (env.DEMO_MODE && env.DEMO_DAILY_RESET) {
+  await queue.upsertJobScheduler(
+    'demo-reset',
+    { pattern: '0 4 * * *', tz },
+    { name: 'demo-reset' },
+  );
+} else {
+  await queue.removeJobScheduler('demo-reset');
+}
 // 승인 기능 제거(2026-11-16): 예전에 등록된 스케줄이 Redis 에 남아 있으면 지운다
 await queue.removeJobScheduler('approvals-maintenance');
 await queue.upsertJobScheduler(

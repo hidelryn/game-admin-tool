@@ -48,6 +48,8 @@ export const AuditAction = {
   NOTICE_CREATE: 'NOTICE_CREATE',
   NOTICE_UPDATE: 'NOTICE_UPDATE',
   NOTICE_HIDE: 'NOTICE_HIDE',
+  /** 체험 서버 매일 초기화 (SYSTEM) */
+  DEMO_RESET: 'DEMO_RESET',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

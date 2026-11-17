@@ -34,6 +34,8 @@ WORKDIR /app
 COPY --from=prod-deps /repo/node_modules ./node_modules
 COPY --from=build /repo/apps/api/dist ./dist
 COPY --from=build /repo/apps/api/drizzle ./drizzle
-RUN echo '{"type":"module"}' > package.json
+# 업로드 저장 폴더 (체험 서버 초기화 때 비움) — 운영에서는 api 와 같은 볼륨
+RUN echo '{"type":"module"}' > package.json \
+  && mkdir -p storage/uploads && chown -R node:node storage
 USER node
 CMD ["node", "--enable-source-maps", "dist/worker.js"]

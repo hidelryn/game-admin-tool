@@ -94,7 +94,11 @@ services:
       MYSQL_PORT: 3306
       REDIS_URL: redis://redis:6379
       REDIS_KEY_PREFIX: 'ga:prod:'
+      ASSET_STORAGE_DIR: /app/storage/uploads
       NODE_OPTIONS: --max-old-space-size=192
+    # 체험 서버 매일 초기화 때 업로드 파일도 지우므로 같은 볼륨을 붙인다
+    volumes:
+      - uploads:/app/storage/uploads
     mem_limit: 256m
     depends_on:
       api: { condition: service_healthy }
@@ -130,6 +134,8 @@ services:
       - ./docker/nginx/prod.conf.template:/etc/nginx/templates/default.conf.template:ro
       - letsencrypt:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
+      # Live2D 안내 캐릭터 모델 (저장소에 없음 — 서버에 직접 복사, docs/live2d.md). 없으면 자리표시로 뜬다
+      - ./live2d:/usr/share/nginx/html/live2d:ro
     command:
       [
         '/bin/sh',

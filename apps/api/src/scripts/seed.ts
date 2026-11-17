@@ -3,6 +3,7 @@ import { loadEnv } from '../config/env.js';
 import { createDb } from '../infra/db/client.js';
 import { seedCore, SEED_ADMINS } from '../infra/db/seed/core.js';
 import { createPasswordHasher } from '../modules/auth/password.js';
+import { ensureDemoAccount } from '../modules/demo/demo.service.js';
 
 /**
  * 기준 데이터 시드: npm run db:seed
@@ -27,6 +28,9 @@ try {
   await seedCore(db.db, { adminPasswordHash: await hasher.hash(checked.data) });
   console.warn('[seed] 완료. 운영자 계정:');
   for (const a of SEED_ADMINS) console.warn(`  - ${a.email} (${a.roleCode})`);
+  // 체험 모드면 공개 체험 계정도 (비밀번호는 DEMO_ACCOUNT_PASSWORD)
+  const demo = await ensureDemoAccount({ db: db.db, env, hasher });
+  if (demo !== 'skipped') console.warn(`  - ${env.DEMO_ACCOUNT_EMAIL} (체험 계정, ${demo})`);
 } finally {
   await db.close();
 }

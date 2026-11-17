@@ -50,6 +50,7 @@ export function TokenStatusTag({ token }: { token: ApiTokenSummary }) {
  * - 원문은 발급 직후 한 번만 보여주고 서버엔 해시만 저장
  */
 export function ApiTokensPage() {
+  const { me } = useAuth();
   const { modal, message } = App.useApp();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -93,7 +94,7 @@ export function ApiTokensPage() {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              disabled={activeCount >= API_TOKEN_MAX_ACTIVE}
+              disabled={activeCount >= API_TOKEN_MAX_ACTIVE || me?.isDemo}
               onClick={() => setCreateOpen(true)}
             >
               토큰 발급
@@ -101,6 +102,15 @@ export function ApiTokensPage() {
           </Tooltip>
         }
       />
+      {me?.isDemo && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="체험 계정은 API 토큰을 발급할 수 없습니다"
+          description="공개 계정이라 토큰이 새어 나가지 않도록 막아 두었습니다. AI(MCP) 연결 방식은 README 의 'MCP 서버 연결'을 참고하세요."
+        />
+      )}
       <Alert
         type="info"
         showIcon

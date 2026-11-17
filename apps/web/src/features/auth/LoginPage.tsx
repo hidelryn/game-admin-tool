@@ -1,22 +1,40 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Form, Input, Typography } from 'antd';
-import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Divider, Flex, Form, Input, Typography } from 'antd';
+import { LockOutlined, MailOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router';
+import dayjs from 'dayjs';
+import type { DemoInfo } from '@game-admin/shared';
 import { useAuth } from '../../shared/auth/AuthProvider';
-import { ApiError } from '../../shared/api/client';
+import { ApiError, api } from '../../shared/api/client';
 import { safeReturnPath } from '../../shared/auth/return-path';
+import { GUIDE_CREDIT, GUIDE_NAME, GuideCharacter, SpeechBubble } from '../../shared/guide/GuideCharacter';
+
+interface LoginValues {
+  email: string;
+  password: string;
+}
 
 export function LoginPage() {
   const { state, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [form] = Form.useForm<LoginValues>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const from = safeReturnPath((location.state as { from?: string } | null)?.from);
 
+  // 체험 계정 안내 (체험 모드가 꺼져 있으면 enabled=false → 카드 숨김)
+  const demo = useQuery({
+    queryKey: ['public-demo'],
+    queryFn: async () => (await api.get<DemoInfo>('/public/demo')).data,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
   if (state.status === 'authenticated') return <Navigate to={from} replace />;
 
-  async function onFinish(v: { email: string; password: string }) {
+  async function onFinish(v: LoginValues) {
     setLoading(true);
     setError(null);
     try {
@@ -30,35 +48,98 @@ export function LoginPage() {
     }
   }
 
+  const account = demo.data?.enabled ? demo.data.accounts[0] : undefined;
+
   return (
-    <div
-      style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#f5f6fa' }}
-    >
-      <Card style={{ width: 380 }}>
-        <Typography.Title level={4} style={{ textAlign: 'center', marginBottom: 24 }}>
-          Game Admin
-        </Typography.Title>
-        {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
-        <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
-          <Form.Item
-            label="이메일"
-            name="email"
-            rules={[{ required: true, type: 'email', message: '이메일을 입력하세요.' }]}
-          >
-            <Input prefix={<MailOutlined />} autoComplete="username" autoFocus />
-          </Form.Item>
-          <Form.Item
-            label="비밀번호"
-            name="password"
-            rules={[{ required: true, message: '비밀번호를 입력하세요.' }]}
-          >
-            <Input.Password prefix={<LockOutlined />} autoComplete="current-password" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={loading}>
-            로그인
-          </Button>
-        </Form>
-      </Card>
+    <div style={{ minHeight: '100vh', background: '#eef1f8', display: 'flex' }}>
+      <Flex
+        wrap
+        justify="center"
+        align="center"
+        gap={48}
+        style={{ margin: 'auto', padding: '32px 16px', maxWidth: 1080, width: '100%' }}
+      >
+        {/* 소개 */}
+        <Flex vertical gap={16} style={{ flex: '1 1 420px', maxWidth: 520 }}>
+          <Flex align="flex-end" gap={8}>
+            <GuideCharacter expression={account ? 'wink' : 'smile'} size={340} />
+            <SpeechBubble style={{ marginBottom: 200, maxWidth: 240 }}>
+              어서 오세요! 안내 담당 <b>{GUIDE_NAME}</b>예요.
+              <br />
+              {account
+                ? '오른쪽 체험 계정으로 들어오면 제가 메뉴를 하나씩 안내해 드릴게요.'
+                : '게임 운영자를 위한 백오피스에 오신 걸 환영해요.'}
+            </SpeechBubble>
+          </Flex>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {GUIDE_CREDIT}
+          </Typography.Text>
+        </Flex>
+
+        {/* 로그인 */}
+        <Flex vertical gap={16} style={{ flex: '0 1 380px', width: 380, maxWidth: '100%' }}>
+          <Card>
+            <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 20 }}>
+              로그인
+            </Typography.Title>
+            {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
+            <Form<LoginValues>
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              requiredMark={false}
+            >
+              <Form.Item
+                label="이메일"
+                name="email"
+                rules={[{ required: true, type: 'email', message: '이메일을 입력하세요.' }]}
+              >
+                <Input prefix={<MailOutlined />} autoComplete="username" autoFocus />
+              </Form.Item>
+              <Form.Item
+                label="비밀번호"
+                name="password"
+                rules={[{ required: true, message: '비밀번호를 입력하세요.' }]}
+              >
+                <Input.Password prefix={<LockOutlined />} autoComplete="current-password" />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading}>
+                로그인
+              </Button>
+            </Form>
+          </Card>
+
+          {account && (
+            <Card size="small" style={{ borderColor: '#adc6ff', background: '#f5f8ff' }}>
+              <Typography.Text strong>체험 계정</Typography.Text>
+              <Typography.Text type="secondary"> · {account.roleName} 권한</Typography.Text>
+              <Divider style={{ margin: '8px 0' }} />
+              <Flex vertical gap={2} style={{ fontFamily: 'monospace' }}>
+                <Typography.Text copyable>{account.email}</Typography.Text>
+                <Typography.Text copyable>{account.password}</Typography.Text>
+              </Flex>
+              <Button
+                icon={<ThunderboltOutlined />}
+                block
+                style={{ marginTop: 10 }}
+                onClick={() => {
+                  form.setFieldsValue({ email: account.email, password: account.password });
+                  void form.submit();
+                }}
+              >
+                체험 계정으로 로그인
+              </Button>
+              <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: '8px 0 0' }}>
+                누구나 같은 계정을 씁니다. 지급·우편·공지·점검 등을 직접 해 볼 수 있고, 데이터는
+                {demo.data?.nextResetAt
+                  ? ` 매일 ${dayjs(demo.data.nextResetAt).format('HH:mm')}에 처음 상태로 돌아갑니다.`
+                  : ' 주기적으로 처음 상태로 돌아갑니다.'}{' '}
+                비밀번호 변경·API 토큰 발급은 막혀 있습니다.
+              </Typography.Paragraph>
+            </Card>
+          )}
+        </Flex>
+      </Flex>
     </div>
   );
 }

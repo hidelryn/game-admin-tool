@@ -46,6 +46,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   NOTICE_CREATE: '공지 등록',
   NOTICE_UPDATE: '공지 수정',
   NOTICE_HIDE: '공지 내리기',
+  DEMO_RESET: '체험 데이터 초기화',
 };
 
 /** 필터 드롭다운용 묶음 */
@@ -86,6 +87,7 @@ export const AUDIT_ACTION_GROUPS: { label: string; actions: AuditAction[] }[] = 
       'NOTICE_HIDE',
     ],
   },
+  { label: '시스템', actions: ['DEMO_RESET'] },
   {
     label: '승인 (이전 기록)',
     actions: [

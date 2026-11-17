@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { Permission, RoleCode, TOKEN_FORBIDDEN_PERMISSIONS } from '@game-admin/shared';
+import { Permission, TOKEN_FORBIDDEN_PERMISSIONS, type RoleCode } from '@game-admin/shared';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../src/infra/db/seed/core.js';
 import { ADMIN, bearer, createTestContext, idem, login, type TestContext } from './helpers.js';
 

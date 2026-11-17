@@ -35,6 +35,8 @@ import { createAssetService } from './modules/assets/asset.service.js';
 import { assetsRouter } from './modules/assets/assets.router.js';
 import { createScheduleService } from './modules/schedules/schedule.service.js';
 import { createNamedLock } from './infra/db/named-lock.js';
+import { isDemoEmail } from './modules/demo/is-demo.js';
+import { demoRouter } from './modules/demo/demo.router.js';
 import { schedulesRouter } from './modules/schedules/schedules.router.js';
 import { createMaintenanceService } from './modules/live-notices/maintenance.service.js';
 import { createNoticeService } from './modules/live-notices/notice.service.js';
@@ -107,7 +109,7 @@ export function buildServices(ctx: AppContext) {
     idempotency,
     authService: createAuthService({ db, redis: ctx.redis, env, logger, hasher, tokens }),
     adminService: createAdminService({ db, hasher }),
-    apiTokenService: createApiTokenService({ db }),
+    apiTokenService: createApiTokenService({ db, isDemo: (email) => isDemoEmail(env, email) }),
     userService: createUserService({ db, confirmation }),
     currencyService: createCurrencyService({ db, confirmation }),
     mailService,
@@ -156,6 +158,7 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
   api.use(auditRouter({ auditService: s.auditService, authenticate }));
   api.use(dashboardRouter({ dashboardService: s.dashboardService, authenticate }));
   api.use(assetsRouter({ assetService: s.assetService, authenticate }));
+  api.use(demoRouter({ env }));
   api.use(schedulesRouter({ scheduleService: s.scheduleService, idempotency, authenticate }));
   api.use(
     liveNoticesRouter({
