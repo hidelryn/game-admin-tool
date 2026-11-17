@@ -383,3 +383,12 @@ COMMIT;
 
 - `approval_requests` 테이블, `ranking_reward_payouts.approval_request_id` 컬럼, `approval:review` 권한 삭제 (마이그레이션 + 시드가 남은 권한·역할 연결·개별 부여를 정리)
 - 지난 승인 이력은 `audit_logs`(APPROVAL_* 작업)에 그대로 남는다
+
+
+### 유저 분석 (2026-11-18 추가) — docs/analytics.md
+
+- `users.max_stage`: 최고 클리어 스테이지 (STAGE_CLEAR 로 `greatest()` 갱신). 이탈·과금 구간 기준
+- `products`: 가상 결제 상품 (id 고정, 시드)
+- `purchases`: 결제 기록 — append only, FK 없음. 결제 당시 가격·젬·스테이지를 그대로 남김. `IDX(purchased_at)`, `IDX(user_id, purchased_at)`
+- `currency_transactions.source` 에 `PURCHASE` 추가 (결제로 받은 유료 젬)
+- 시드: 순서대로 진행 + 난이도 벽 모델. 기간 이전은 상태만 계산하고 잔액을 "이전 기록 이월" 1건으로 남김 (원장 합계 = 잔액)

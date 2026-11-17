@@ -54,7 +54,7 @@ try {
   );
   const r = await seedGame(db.db, { scale, log: (m) => console.warn(m) });
   console.warn(
-    `[seed:game] 완료 ${((Date.now() - started) / 1000).toFixed(1)}s — 회원 ${r.users.toLocaleString()}, 활동 ${r.activities.toLocaleString()}, 원장 ${r.transactions.toLocaleString()}`,
+    `[seed:game] 완료 ${((Date.now() - started) / 1000).toFixed(1)}s — 회원 ${r.users.toLocaleString()}, 활동 ${r.activities.toLocaleString()}, 원장 ${r.transactions.toLocaleString()}, 결제 ${r.purchases.toLocaleString()}`,
   );
 } finally {
   await db.close();

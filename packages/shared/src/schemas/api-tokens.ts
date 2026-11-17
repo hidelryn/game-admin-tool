@@ -19,6 +19,7 @@ export const DEMO_TOKEN_PERMISSIONS: readonly Permission[] = [
   Permission.AUDIT_READ,
   Permission.SCHEDULE_READ,
   Permission.NOTICE_READ,
+  Permission.ANALYTICS_READ,
 ];
 export const DEMO_TOKEN_MAX_ACTIVE = 20;
 export const DEMO_TOKEN_ISSUE_PER_HOUR = 3;

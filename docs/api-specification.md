@@ -184,6 +184,17 @@ CS 역할처럼 "본인 작업만" 조회 가능한 경우, 서비스 계층에�
 
 결과는 Redis에 60초 캐시.
 
+### 2.10-1 유저 분석 (analytics) — docs/analytics.md
+
+| Method | Path | 설명 | 권한 |
+|---|---|---|---|
+| GET | `/analytics/churn` | `?inactiveDays=7` 스테이지 구간별 도달·멈춤·이탈·이탈률 | `analytics:read` |
+| GET | `/analytics/retention` | `?from&to` 가입 코호트 D1·3·7·14·30 재접속률 (최대 90일) | `analytics:read` |
+| GET | `/analytics/purchases` | `?from&to` 매출·결제자·결제율·ARPPU·첫 결제 구간/경과일·상품별 | `analytics:read` |
+| GET | `/analytics/spending` | `?from&to&currencyCode` 게임 안 소비 사유별·구간별 | `analytics:read` |
+
+결과는 Redis에 10분 캐시.
+
 ### 2.11 시스템
 
 | Method | Path | 설명 | 권한 |
@@ -198,8 +209,10 @@ CS 역할처럼 "본인 작업만" 조회 가능한 경우, 서비스 계층에�
 
 | Method | Path | 설명 |
 |---|---|---|
-| GET | `/internal/game/users/sample?size=50` | 활동 중인 회원 무작위 샘플 |
-| POST | `/internal/game/events` | 활동 이벤트 배치(≤500) — 정지·탈퇴 회원 이벤트는 거부해 `rejected` 로 반환, LOGIN 은 `last_login_at` 갱신 |
+| GET | `/internal/game/users/sample?size=50&recentDays=` | 활동 중인 회원 무작위 샘플 `[{ publicId, maxStage, payCount }]` (recentDays: 최근 접속·가입 회원만) |
+| POST | `/internal/game/purchases` | 가상 결제 `{ publicId, productCode }` → 결제 기록 + 유료 젬 지급(원장 source=PURCHASE) |
+| GET | `/internal/game/products` | 상품 목록 |
+| POST | `/internal/game/events` | 활동 이벤트 배치(≤500) — 정지·탈퇴 회원 이벤트는 거부해 `rejected` 로 반환, LOGIN 은 `last_login_at`, STAGE_CLEAR(`payload.stage`) 는 `max_stage` 갱신 |
 | POST | `/internal/game/scores` | 랭킹 점수 기록 `{ publicId, score, seasonId? , boardCode? }` — 보드 코드면 그 보드의 진행 중 시즌, 둘 다 없으면 진행 중 시즌이 하나일 때만. 진행 중이 아니거나 모호하면 422 `SEASON_NOT_ACTIVE` |
 | GET | `/internal/game/live-ops?at=` | 지금(또는 at) 게임에 보일 것: 보드별 진행 중 시즌(`seasons[]`)·이벤트·팝업·배너 (우선순위 순) + `maintenance`(진행 중 점검)·`sessionEpoch`(세션 세대 — 오르면 접속 중 유저를 끊음)·`tickers[]`(≤5). 점검 중에도 열림 |
 | GET | `/internal/game/notices` | 게시 중 공지 (고정 → 최신). 점검 중에도 열림 |

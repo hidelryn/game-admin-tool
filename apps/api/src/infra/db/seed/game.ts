@@ -3,6 +3,7 @@ import { ActivityType, CurrencySource, UserStatus } from '@game-admin/shared';
 import type { Executor } from '../types.js';
 import {
   currencyTransactions,
+  purchases,
   rankingScores,
   rankingSeasons,
   userActivityLogs,
@@ -10,7 +11,8 @@ import {
   userSuspensions,
   users,
 } from '../schema/index.js';
-import { SEED_CURRENCIES } from './core.js';
+import { SEED_CURRENCIES, SEED_PRODUCTS } from './core.js';
+import { planSession, type PlayerState } from '../../../modules/analytics/game-model.js';
 import { seqFromTime } from '../../../modules/rankings/seq-generator.js';
 
 /**
@@ -72,6 +74,7 @@ export interface SeedGameResult {
   users: number;
   activities: number;
   transactions: number;
+  purchases: number;
 }
 
 export async function seedGame(
@@ -97,6 +100,9 @@ export async function seedGame(
 
   let activities = 0;
   let transactions = 0;
+  let purchaseCount = 0;
+  const currencyByCode = new Map(SEED_CURRENCIES.map((c) => [c.code as string, c]));
+  const productByCode = new Map(SEED_PRODUCTS.map((p) => [p.code as string, p]));
 
   for (let start = 0; start < userCount; start += BATCH) {
     const userRows: (typeof users.$inferInsert)[] = [];
@@ -105,6 +111,7 @@ export async function seedGame(
     const activityRows: (typeof userActivityLogs.$inferInsert)[] = [];
     const suspensionRows: (typeof userSuspensions.$inferInsert)[] = [];
     const scoreRows: (typeof rankingScores.$inferInsert)[] = [];
+    const purchaseRows: (typeof purchases.$inferInsert)[] = [];
 
     for (let i = start; i < Math.min(start + BATCH, userCount); i++) {
       const id = baseId + i;
@@ -113,8 +120,7 @@ export async function seedGame(
       const registeredAt = new Date(
         now.getTime() - (rand() < 0.7 ? rand() * days : days + rand() * 365) * DAY,
       );
-      const engagement = rand(); // 0~1, 높을수록 자주 접속
-      const churnDaysAgo = rand() < 0.3 ? int(0, days) : 0; // 30% 는 언젠가부터 접속 중단
+      const engagement = 0.25 + rand() * 0.75; // 접속하는 날의 비율
       const roll = rand();
       const status =
         roll < 0.005
@@ -123,30 +129,106 @@ export async function seedGame(
             ? UserStatus.SUSPENDED
             : UserStatus.ACTIVE;
 
-      // 활동 로그: 가입 후 ~ 이탈 전까지, 날마다 engagement 확률로 접속
+      // 플레이 시뮬레이션 (docs/analytics.md 4장): 가입일부터 하루씩, 접속한 날마다 한 번 플레이
+      // 기간(days) 이전은 상태(진행도·결제·잔액)만 계산하고, 기간 안은 활동·원장까지 남긴다
+      const state: PlayerState = { maxStage: 0, payCount: 0 };
+      const balance: Record<string, number> = { GOLD: 1_000, GEM: 0, FREE_GEM: 100, STAMINA: 100 };
+      const windowStart = now.getTime() - days * DAY;
+      let carried = registeredAt.getTime() >= windowStart; // 이월 잔액 기록 여부
       let lastLoginAt: Date | null = null;
-      const firstDay = Math.min(days, Math.floor((now.getTime() - registeredAt.getTime()) / DAY));
-      for (let d = firstDay; d >= churnDaysAgo; d--) {
-        if (status === UserStatus.WITHDRAWN || rand() > engagement * 0.8) continue;
-        const dayStart = now.getTime() - d * DAY;
-        const loginAt = new Date(dayStart - rand() * DAY * 0.9);
-        if (loginAt < registeredAt || loginAt > now) continue;
-        activityRows.push({
+      const addTx = (code: string, delta: number, reason: string, at: Date, source: string) => {
+        const c = currencyByCode.get(code)!;
+        const before = balance[code] ?? 0;
+        balance[code] = before + delta;
+        txRows.push({
           userId: id,
-          type: ActivityType.LOGIN,
-          payload: null,
-          occurredAt: loginAt,
+          currencyId: c.id,
+          delta,
+          balanceBefore: before,
+          balanceAfter: before + delta,
+          source,
+          reason,
+          createdAt: at,
         });
-        const clears = int(0, 3);
-        for (let c = 0; c < clears; c++) {
+      };
+      if (carried) {
+        for (const [code, v] of Object.entries(balance))
+          if (v > 0) {
+            balance[code] = 0;
+            addTx(code, v, '가입 보상', registeredAt, CurrencySource.GAME);
+          }
+      }
+
+      const totalDays = Math.floor((now.getTime() - registeredAt.getTime()) / DAY);
+      for (let d = 0; d <= totalDays && status !== UserStatus.WITHDRAWN; d++) {
+        const dayStart = registeredAt.getTime() + d * DAY;
+        // 첫날은 반드시 접속, 이후엔 engagement 확률
+        if (d > 0 && rand() > engagement) continue;
+        const loginAt = new Date(d === 0 ? dayStart + 60_000 : dayStart + rand() * DAY * 0.9);
+        if (loginAt > now) break;
+        const inWindow = loginAt.getTime() >= windowStart;
+        if (inWindow && !carried) {
+          // 기간 시작 시점 잔액을 한 번에 이월 (원장 합계 = 잔액 유지)
+          for (const [code, v] of Object.entries(balance))
+            if (v > 0) {
+              balance[code] = 0;
+              addTx(code, v, '이전 기록 이월', new Date(windowStart), CurrencySource.GAME);
+            }
+          carried = true;
+        }
+
+        const plan = planSession(rand, state);
+        lastLoginAt = loginAt;
+        if (inWindow) {
           activityRows.push({
             userId: id,
-            type: ActivityType.STAGE_CLEAR,
-            payload: { stage: int(1, 120), stars: int(1, 3) },
-            occurredAt: new Date(loginAt.getTime() + (c + 1) * 300_000),
+            type: ActivityType.LOGIN,
+            payload: null,
+            occurredAt: loginAt,
           });
+          plan.clears.forEach((stage, c) =>
+            activityRows.push({
+              userId: id,
+              type: ActivityType.STAGE_CLEAR,
+              payload: { stage, stars: int(1, 3) },
+              occurredAt: new Date(loginAt.getTime() + (c + 1) * 180_000),
+            }),
+          );
         }
-        if (!lastLoginAt || loginAt > lastLoginAt) lastLoginAt = loginAt;
+        if (plan.purchase) {
+          const p = productByCode.get(plan.purchase)!;
+          const at = new Date(loginAt.getTime() + (plan.clears.length + 1) * 180_000);
+          purchaseRows.push({
+            userId: id,
+            productId: p.id,
+            priceKrw: p.priceKrw,
+            gemAmount: p.gemAmount,
+            stage: state.maxStage,
+            purchasedAt: at,
+          });
+          if (inWindow)
+            addTx('GEM', p.gemAmount, `상품 구매: ${p.name}`, at, CurrencySource.PURCHASE);
+          else balance.GEM = (balance.GEM ?? 0) + p.gemAmount;
+          state.payCount++;
+        }
+        for (const step of plan.ledger) {
+          if ((balance[step.currencyCode] ?? 0) + step.delta < 0) continue; // 잔액 부족 → 그 행동은 안 함
+          const at = new Date(loginAt.getTime() + (plan.clears.length + 2) * 180_000);
+          if (inWindow) addTx(step.currencyCode, step.delta, step.reason, at, CurrencySource.GAME);
+          else balance[step.currencyCode] = (balance[step.currencyCode] ?? 0) + step.delta;
+        }
+        if (plan.clears.length) state.maxStage = plan.clears[plan.clears.length - 1]!;
+        if (plan.quit) break;
+      }
+
+      if (!carried) {
+        // 기간 안에 한 번도 접속하지 않은 오래된 회원: 잔액만 이월
+        for (const [code, v] of Object.entries(balance))
+          if (v > 0) {
+            balance[code] = 0;
+            addTx(code, v, '이전 기록 이월', new Date(windowStart), CurrencySource.GAME);
+          }
+        carried = true;
       }
 
       userRows.push({
@@ -154,30 +236,19 @@ export async function seedGame(
         publicId: `U${String(1_000_000 + n)}`,
         nickname: `${pick(ADJ)}${pick(NOUN)}${int(1, 9999)}`,
         email: `player${n}@example.com`,
-        level: Math.max(1, Math.round(engagement * 80 + int(0, 20))),
+        level: Math.max(1, Math.round(state.maxStage * 0.6) + int(0, 4)),
+        maxStage: state.maxStage,
         status,
         registeredAt,
         lastLoginAt,
       });
-
-      // 초기 잔액 + 원장 (source=GAME) — 잔액과 원장 합계가 항상 일치하도록
-      for (const c of SEED_CURRENCIES) {
-        const cap =
-          ({ GOLD: 500_000, GEM: 5_000, FREE_GEM: 3_000, STAMINA: 200 } as Record<string, number>)[
-            c.code
-          ] ?? 200;
-        const balance = Math.floor(rand() * cap * engagement);
-        if (balance === 0) continue;
-        balanceRows.push({ userId: id, currencyId: c.id, balance, version: 1 });
-        txRows.push({
+      for (const [code, v] of Object.entries(balance)) {
+        if (v <= 0) continue;
+        balanceRows.push({
           userId: id,
-          currencyId: c.id,
-          delta: balance,
-          balanceBefore: 0,
-          balanceAfter: balance,
-          source: CurrencySource.GAME,
-          reason: '시드 초기 잔액',
-          createdAt: registeredAt,
+          currencyId: currencyByCode.get(code)!.id,
+          balance: v,
+          version: 1,
         });
       }
 
@@ -197,7 +268,7 @@ export async function seedGame(
         scoreRows.push({
           seasonId: season.id,
           userId: id,
-          score: Math.floor(engagement ** 2 * 50_000 + rand() * 1_000),
+          score: Math.floor(engagement ** 2 * 30_000 + state.maxStage * 200 + rand() * 1_000),
           achievedAt: lastLoginAt,
           achievedSeq,
         });
@@ -212,6 +283,9 @@ export async function seedGame(
       await db.insert(userActivityLogs).values(activityRows.slice(i, i + BATCH));
     if (suspensionRows.length) await db.insert(userSuspensions).values(suspensionRows);
     if (scoreRows.length) await db.insert(rankingScores).values(scoreRows);
+    for (let i = 0; i < purchaseRows.length; i += BATCH)
+      await db.insert(purchases).values(purchaseRows.slice(i, i + BATCH));
+    purchaseCount += purchaseRows.length;
 
     activities += activityRows.length;
     transactions += txRows.length;
@@ -220,7 +294,7 @@ export async function seedGame(
     );
   }
 
-  return { users: userCount, activities, transactions };
+  return { users: userCount, activities, transactions, purchases: purchaseCount };
 }
 
 /** --reset 시 비우는 게임 데이터 테이블 (운영자·권한·마스터는 유지) */
@@ -232,6 +306,7 @@ export const GAME_TABLES = [
   'mail_rewards',
   'mails',
   'user_items',
+  'purchases',
   'currency_transactions',
   'user_currencies',
   'user_activity_logs',

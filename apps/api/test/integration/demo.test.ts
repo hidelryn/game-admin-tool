@@ -231,7 +231,8 @@ describe('가상 활동 (worker demo-activity)', () => {
       .from(currencyTransactions)
       .where(inArray(currencyTransactions.userId, ids));
     expect(ledger.length).toBeGreaterThanOrEqual(5);
-    expect(new Set(ledger.map((l) => l.source))).toEqual(new Set(['GAME']));
+    // 게임 서버 몫(GAME)과 가상 결제(PURCHASE)만 — 운영자 지급처럼 남지 않는다
+    expect(ledger.every((l) => l.source === 'GAME' || l.source === 'PURCHASE')).toBe(true);
 
     const op = (await login(t.app, ADMIN.operator)).accessToken;
     const summary = await request(t.app).get('/api/v1/dashboard/summary').set(bearer(op));

@@ -2,11 +2,15 @@
  * 게임 서버 시뮬레이터: npm run simulate -- [--users=50] [--interval=5] [--ticks=0]
  *
  * 실제 게임 서버처럼 내부 API(/api/v1/internal/game/*)만 호출한다 → DB 에 직접 쓰지 않음.
- * 매 틱마다 활동 회원을 뽑아 로그인·스테이지 클리어·재화 획득/소비·점수 기록·우편 수령을 발생시킨다.
+ * 매 틱마다 최근 활동 회원을 뽑아 로그인·스테이지 진행·결제·재화 획득/소비·점수 기록·우편 수령을 발생시킨다.
+ * 플레이 방식은 시드·체험 모드와 같은 모델(modules/analytics/game-model.ts).
  * 대시보드(DAU·재화 흐름), 회원 활동 이력, 랭킹, 우편 수령 현황이 살아 움직이게 하는 용도.
  *
  * 필요: API 서버 실행 중 + .env 의 INTERNAL_API_KEY (production 에서는 내부 API 가 꺼져 있어 동작하지 않음)
  */
+import type { SampledUser } from '@game-admin/shared';
+import { planSession } from '../modules/analytics/game-model.js';
+
 const args = new Map(
   process.argv.slice(2).map((a) => {
     const [k, v] = a.replace(/^--/, '').split('=');
@@ -107,12 +111,14 @@ async function tick(n: number) {
   // 진행 중인 랭킹(보드)들 — 점수는 그중 하나에 무작위로 기록
   const boards = ops?.seasons.map((x) => x.boardCode) ?? [];
 
-  const sample = await call<string[]>('GET', `/users/sample?size=${USERS}`);
+  // 최근 3일 안에 접속한 회원만 — 떠난 회원이 되살아나지 않게 (이탈 분석, docs/analytics.md)
+  const sample = await call<SampledUser[]>('GET', `/users/sample?size=${USERS}&recentDays=3`);
   if (!sample.ok) throw new Error(`sample failed: ${sample.status} ${sample.code ?? ''}`);
-  const ids = sample.data ?? [];
+  const players = sample.data ?? [];
   const stats = {
     logins: 0,
     clears: 0,
+    purchases: 0,
     earned: 0,
     spent: 0,
     insufficient: 0,
@@ -120,76 +126,61 @@ async function tick(n: number) {
     claims: 0,
   };
 
-  // 1) 활동 이벤트 (한 번에 전송)
+  // 1) 접속 + 스테이지 진행 (game-model: 순서대로, 20·45·80 은 난이도 벽) — 한 번에 전송
   const now = Date.now();
-  const events = ids.flatMap((publicId) => {
-    const list: {
-      publicId: string;
-      type: string;
-      payload?: Record<string, unknown>;
-      occurredAt: string;
-    }[] = [{ publicId, type: 'LOGIN', occurredAt: new Date(now).toISOString() }];
-    for (let i = 0; i < rand(0, 3); i++) {
-      list.push({
-        publicId,
-        type: 'STAGE_CLEAR',
-        payload: { stage: rand(1, 120), stars: rand(1, 3) },
-        occurredAt: new Date(now + (i + 1) * 1000).toISOString(),
-      });
-    }
-    return list;
-  });
+  const plans = new Map(
+    players.map((u) => [u.publicId, planSession(Math.random, u, { stamina: true })]),
+  );
+  const events = players.flatMap(({ publicId }) => [
+    { publicId, type: 'LOGIN', occurredAt: new Date(now).toISOString() },
+    ...plans.get(publicId)!.clears.map((stage, i) => ({
+      publicId,
+      type: 'STAGE_CLEAR',
+      payload: { stage, stars: rand(1, 3) },
+      occurredAt: new Date(now + (i + 1) * 1000).toISOString(),
+    })),
+  ]);
   for (let i = 0; i < events.length; i += 500) {
-    const r = await call<{ accepted: number }>('POST', '/events', {
-      events: events.slice(i, i + 500),
-    });
+    const chunk = events.slice(i, i + 500);
+    const r = await call<{ accepted: number }>('POST', '/events', { events: chunk });
     if (r.status === 503 && r.code === 'MAINTENANCE') {
       // 틱 도중 점검이 시작됨
       maintenanceLog(null);
       inMaintenance = true;
       return;
     }
-    stats.logins += events.slice(i, i + 500).filter((e) => e.type === 'LOGIN').length;
-    stats.clears +=
-      (r.data?.accepted ?? 0) - events.slice(i, i + 500).filter((e) => e.type === 'LOGIN').length;
+    const logins = chunk.filter((e) => e.type === 'LOGIN').length;
+    stats.logins += logins;
+    stats.clears += (r.data?.accepted ?? 0) - logins;
   }
 
-  // 2) 회원별 재화·점수·우편 (동시 10명씩)
-  for (let i = 0; i < ids.length; i += 10) {
+  // 2) 회원별 결제·재화·점수·우편 (동시 10명씩)
+  for (let i = 0; i < players.length; i += 10) {
     await Promise.all(
-      ids.slice(i, i + 10).map(async (publicId) => {
-        const gold = await call('POST', '/currencies', {
-          publicId,
-          currencyCode: 'GOLD',
-          delta: rand(100, 2_000),
-          reason: '스테이지 클리어 보상',
-        });
-        if (gold.ok) stats.earned++;
-        if (chance(0.15)) {
-          const fg = await call('POST', '/currencies', {
-            publicId,
-            currencyCode: 'FREE_GEM',
-            delta: rand(5, 30),
-            reason: '일일 미션 보상',
-          });
-          if (fg.ok) stats.earned++;
+      players.slice(i, i + 10).map(async ({ publicId, maxStage }) => {
+        const plan = plans.get(publicId)!;
+        if (plan.purchase) {
+          const p = await call('POST', '/purchases', { publicId, productCode: plan.purchase });
+          if (p.ok) stats.purchases++;
         }
-        if (chance(0.4)) {
-          const spend = await call('POST', '/currencies', {
+        for (const l of plan.ledger) {
+          const c = await call('POST', '/currencies', {
             publicId,
-            currencyCode: chance(0.5) ? 'GOLD' : 'STAMINA',
-            delta: -rand(10, 500),
-            reason: chance(0.5) ? '장비 강화' : '스테이지 입장',
+            currencyCode: l.currencyCode,
+            delta: l.delta,
+            reason: l.reason,
           });
-          if (spend.ok) stats.spent++;
-          else if (spend.code === 'INSUFFICIENT_BALANCE') stats.insufficient++;
+          if (c.ok) {
+            if (l.delta > 0) stats.earned++;
+            else stats.spent++;
+          } else if (c.code === 'INSUFFICIENT_BALANCE') stats.insufficient++;
         }
         // 진행 중 시즌이 있을 때만 점수 기록 (시즌 종료 후엔 서버도 거부)
         if (boards.length && chance(0.3)) {
           const s = await call('POST', '/scores', {
             boardCode: boards[rand(0, boards.length - 1)],
             publicId,
-            score: rand(1_000, 60_000) + n * 50,
+            score: (plan.clears.at(-1) ?? maxStage) * 400 + rand(0, 2_000) + n * 10,
           });
           if (s.ok) stats.scores++;
         }
@@ -206,7 +197,7 @@ async function tick(n: number) {
       }),
     );
   }
-  console.warn(`[simulator] tick ${n} — users ${ids.length}, ${JSON.stringify(stats)}`);
+  console.warn(`[simulator] tick ${n} — users ${players.length}, ${JSON.stringify(stats)}`);
 }
 
 console.warn(
@@ -224,5 +215,3 @@ for (let n = 1; !stopped && (TICKS === 0 || n <= TICKS); n++) {
   }
   if (TICKS === 0 || n < TICKS) await new Promise((r) => setTimeout(r, INTERVAL_SEC * 1000));
 }
-
-export {};

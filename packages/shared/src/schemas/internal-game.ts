@@ -50,7 +50,17 @@ export const gameClaimRequestSchema = z.object({ publicId: publicIdSchema });
 
 export const sampleUsersQuerySchema = z.object({
   size: z.coerce.number().int().min(1).max(500).default(50),
+  /** 최근 N일 안에 접속(또는 가입)한 회원만 — 이탈한 회원이 되살아나지 않게 */
+  recentDays: z.coerce.number().int().min(1).max(60).optional(),
 });
+
+export interface SampledUser {
+  publicId: string;
+  /** 최고 클리어 스테이지 */
+  maxStage: number;
+  /** 지금까지 결제 횟수 */
+  payCount: number;
+}
 
 export interface GameEventsResult {
   accepted: number;

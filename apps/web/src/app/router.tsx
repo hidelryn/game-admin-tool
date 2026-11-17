@@ -5,6 +5,7 @@ import { RequireAuth, RequirePermission } from '../shared/auth/guards';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ChangePasswordPage } from '../features/auth/ChangePasswordPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { AnalyticsPage } from '../features/analytics/AnalyticsPage';
 import { UsersPage } from '../features/users/UsersPage';
 import { UserDetailPage } from '../features/users/UserDetailPage';
 import { CurrenciesPage } from '../features/currencies/CurrenciesPage';
@@ -45,6 +46,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permissions={[Permission.DASHBOARD_READ]}>
             <DashboardPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'analytics',
+        element: (
+          <RequirePermission permissions={[Permission.ANALYTICS_READ]}>
+            <AnalyticsPage />
           </RequirePermission>
         ),
       },

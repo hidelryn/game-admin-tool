@@ -12,6 +12,8 @@ export const CurrencySource = {
   ADMIN: 'ADMIN',
   MAIL: 'MAIL',
   GAME: 'GAME',
+  /** 상품 결제로 받은 유료 젬 (purchases) */
+  PURCHASE: 'PURCHASE',
 } as const;
 export type CurrencySource = (typeof CurrencySource)[keyof typeof CurrencySource];
 

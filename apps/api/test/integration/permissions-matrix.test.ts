@@ -67,6 +67,11 @@ const ROUTES: [Method, string, Permission | null][] = [
   ['post', '/ranking-seasons/1/reset', Permission.RANKING_MANAGE],
   ['post', '/ranking-seasons/1/restore', Permission.RANKING_MANAGE],
   ['post', '/ranking-seasons/1/rewards', Permission.RANKING_MANAGE],
+  // 유저 분석
+  ['get', '/analytics/churn', Permission.ANALYTICS_READ],
+  ['get', '/analytics/retention', Permission.ANALYTICS_READ],
+  ['get', '/analytics/purchases', Permission.ANALYTICS_READ],
+  ['get', '/analytics/spending', Permission.ANALYTICS_READ],
   // 스케줄·이미지
   ['get', '/schedules', Permission.SCHEDULE_READ],
   ['get', '/schedules/999999', Permission.SCHEDULE_READ],

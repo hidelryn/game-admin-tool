@@ -3,6 +3,7 @@ import {
   AuditOutlined,
   CalendarOutlined,
   DashboardOutlined,
+  FundOutlined,
   DollarOutlined,
   FileSearchOutlined,
   KeyOutlined,
@@ -31,6 +32,12 @@ const MENU: { key: string; label: string; icon: ReactNode; permission?: Permissi
     label: '대시보드',
     icon: <DashboardOutlined />,
     permission: Permission.DASHBOARD_READ,
+  },
+  {
+    key: '/analytics',
+    label: '유저 분석',
+    icon: <FundOutlined />,
+    permission: Permission.ANALYTICS_READ,
   },
   { key: '/users', label: '회원 관리', icon: <TeamOutlined />, permission: Permission.USER_READ },
   {

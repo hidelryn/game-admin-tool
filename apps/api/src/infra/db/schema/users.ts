@@ -10,6 +10,8 @@ export const users = mysqlTable(
     nickname: varchar('nickname', { length: 30 }).notNull(),
     email: varchar('email', { length: 191 }).notNull(),
     level: int('level', { unsigned: true }).notNull().default(1),
+    /** 최고 클리어 스테이지 (STAGE_CLEAR 이벤트로 갱신) — 이탈·과금 구간 분석용 */
+    maxStage: int('max_stage', { unsigned: true }).notNull().default(0),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
     registeredAt: dt('registered_at').notNull(),
     lastLoginAt: dt('last_login_at'),

@@ -28,10 +28,11 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   'maintenance:manage': '점검 관리',
   'notice:read': '공지 조회',
   'notice:manage': '공지 관리',
+  'analytics:read': '유저 분석 조회',
 };
 
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
-  { label: '대시보드', permissions: ['dashboard:read'] },
+  { label: '대시보드·분석', permissions: ['dashboard:read', 'analytics:read'] },
   { label: '회원', permissions: ['user:read', 'user:read_pii', 'user:suspend'] },
   { label: '재화', permissions: ['currency:read', 'currency:grant', 'currency:deduct'] },
   { label: '우편', permissions: ['mail:read', 'mail:send', 'mail:send_all'] },

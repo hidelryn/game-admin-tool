@@ -14,7 +14,12 @@ export interface LedgerFilter {
   to?: string;
 }
 
-const SOURCE_COLOR: Record<string, string> = { ADMIN: 'purple', MAIL: 'blue', GAME: 'default' };
+const SOURCE_COLOR: Record<string, string> = {
+  ADMIN: 'purple',
+  MAIL: 'blue',
+  GAME: 'default',
+  PURCHASE: 'gold',
+};
 
 /**
  * 재화 원장 (커서 페이지네이션, "더 보기")

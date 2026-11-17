@@ -7,6 +7,7 @@ import {
   gameClaimRequestSchema,
   gameCurrencyRequestSchema,
   gameEventsRequestSchema,
+  gamePurchaseRequestSchema,
   gameScoreRequestSchema,
   idParamSchema,
   publicIdSchema,
@@ -23,6 +24,7 @@ import type { ScheduleService } from '../schedules/schedule.service.js';
 import type { MaintenanceService } from '../live-notices/maintenance.service.js';
 import type { NoticeService } from '../live-notices/notice.service.js';
 import { recordGameEvents, sampleActiveUsers } from './game-actions.js';
+import type { PurchaseService } from '../analytics/purchase.service.js';
 
 /**
  * 게임 서버 역할을 대신하는 내부 API (api-specification.md 2.12)
@@ -40,6 +42,7 @@ export function internalGameRouter(deps: {
   scheduleService: ScheduleService;
   maintenanceService: MaintenanceService;
   noticeService: NoticeService;
+  purchaseService: PurchaseService;
 }): Router {
   const {
     db,
@@ -49,6 +52,7 @@ export function internalGameRouter(deps: {
     scheduleService,
     maintenanceService,
     noticeService,
+    purchaseService,
   } = deps;
   const router = Router();
   const expected = Buffer.from(deps.apiKey);
@@ -64,8 +68,8 @@ export function internalGameRouter(deps: {
 
   /** 활동 중인 회원 무작위 샘플 */
   router.get('/internal/game/users/sample', async (req, res) => {
-    const { size } = sampleUsersQuerySchema.parse(req.query);
-    res.json({ data: await sampleActiveUsers(db, size) });
+    const { size, recentDays } = sampleUsersQuerySchema.parse(req.query);
+    res.json({ data: await sampleActiveUsers(db, size, { recentDays }) });
   });
 
   /** 활동 이벤트 기록. 정지·탈퇴 회원은 거부 (정지가 실제로 게임 접속을 막는 것처럼), 점검 중엔 예외 회원만 */
@@ -116,6 +120,17 @@ export function internalGameRouter(deps: {
         input.reason,
       ),
     });
+  });
+
+  /** 결제 (가상) — 유료 젬 지급 + 결제 기록 (docs/analytics.md) */
+  router.post('/internal/game/purchases', async (req, res) => {
+    const input = gamePurchaseRequestSchema.parse(req.body);
+    await maintenanceService.assertOpen(input.publicId);
+    res.status(201).json({ data: await purchaseService.record(input.publicId, input.productCode) });
+  });
+
+  router.get('/internal/game/products', async (_req, res) => {
+    res.json({ data: await purchaseService.products() });
   });
 
   router.get('/internal/game/users/:publicId/mails', async (req, res) => {

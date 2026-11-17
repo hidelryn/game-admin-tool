@@ -22,6 +22,7 @@ export const Permission = {
   MAINTENANCE_MANAGE: 'maintenance:manage',
   NOTICE_READ: 'notice:read',
   NOTICE_MANAGE: 'notice:manage',
+  ANALYTICS_READ: 'analytics:read',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];

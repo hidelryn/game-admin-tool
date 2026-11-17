@@ -57,6 +57,13 @@
       "when": 1794797870743,
       "tag": "0007_powerful_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1794932849355,
+      "tag": "0008_slimy_ken_ellis",
+      "breakpoints": true
     }
   ]
 }

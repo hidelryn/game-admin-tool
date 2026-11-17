@@ -29,6 +29,13 @@ const STOPS: Stop[] = [
     text: '오늘 접속자(DAU)·신규 가입·재화 발행/소모를 한눈에 봐요. 게임이 점검 중인지도 여기서 보여요.',
   },
   {
+    key: '/analytics',
+    permission: Permission.ANALYTICS_READ,
+    title: '유저 분석',
+    text: '회원이 몇 스테이지에서 많이 떠나는지, 언제 처음 결제하는지, 재화를 어디에 쓰는지 봐요. 20·45·80 스테이지의 난이도 벽이 바로 보일 거예요.',
+    expression: 'wink',
+  },
+  {
     key: '/users',
     permission: Permission.USER_READ,
     title: '회원 관리',

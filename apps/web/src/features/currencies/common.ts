@@ -6,6 +6,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   ADMIN: '운영자',
   MAIL: '우편',
   GAME: '게임',
+  PURCHASE: '결제',
 };
 
 export const CHANNEL_LABEL: Record<string, string> = {

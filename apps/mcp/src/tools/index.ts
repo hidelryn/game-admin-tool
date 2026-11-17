@@ -10,6 +10,7 @@ import {
 import { getRanking, listRankingSeasons } from './rankings.js';
 import { createNotice, getMaintenanceStatus, listNotices, listSchedules } from './live-ops.js';
 import { getOperationLogs, sendMail } from './mails-audit.js';
+import { analyzeChurn, analyzePurchases, analyzeRetention, analyzeSpending } from './analytics.js';
 
 /** 전체 Tool (docs/mcp-tools.md 2장). 실제 노출은 토큰 권한으로 거른다 */
 export const ALL_TOOLS = [
@@ -24,6 +25,10 @@ export const ALL_TOOLS = [
   getMaintenanceStatus,
   listNotices,
   getOperationLogs,
+  analyzeChurn,
+  analyzeRetention,
+  analyzePurchases,
+  analyzeSpending,
   // 변경
   grantCurrency,
   deductCurrency,

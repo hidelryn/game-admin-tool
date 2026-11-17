@@ -8,6 +8,7 @@ import {
   currencies,
   items,
   permissions,
+  products,
   rankingBoards,
   rankingSeasons,
   rolePermissions,
@@ -45,6 +46,7 @@ const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'maintenance:manage': '게임 점검 예약·긴급 점검·해제',
   'notice:read': '공지 조회',
   'notice:manage': '공지 등록·수정·내리기',
+  'analytics:read': '유저 분석(이탈·리텐션·과금·재화 소비처) 조회',
 };
 
 /** 기본 역할 권한 (architecture.md 4.3) */
@@ -67,6 +69,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> =
     Permission.MAINTENANCE_MANAGE,
     Permission.NOTICE_READ,
     Permission.NOTICE_MANAGE,
+    Permission.ANALYTICS_READ,
   ],
   CS: [
     Permission.DASHBOARD_READ,
@@ -88,6 +91,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> =
     Permission.AUDIT_READ,
     Permission.SCHEDULE_READ,
     Permission.NOTICE_READ,
+    Permission.ANALYTICS_READ,
   ],
 };
 
@@ -145,6 +149,30 @@ export const SEED_ITEMS = [
   { id: 1002, code: 'EXP_POTION', name: '경험치 물약', stackable: true },
   { id: 1003, code: 'SKIN_BOX', name: '스킨 상자', stackable: true },
   { id: 1004, code: 'NAME_CHANGE_TICKET', name: '닉네임 변경권', stackable: true },
+] as const;
+
+/** 가상 결제 상품 (docs/analytics.md) — id 고정 */
+export const SEED_PRODUCTS = [
+  {
+    id: 1,
+    code: 'STARTER_PACK',
+    name: '스타터 패키지',
+    priceKrw: 3_300,
+    gemAmount: 300,
+    sortOrder: 1,
+  },
+  { id: 2, code: 'GEM_60', name: '젬 60개', priceKrw: 1_200, gemAmount: 60, sortOrder: 2 },
+  { id: 3, code: 'GEM_330', name: '젬 330개', priceKrw: 5_900, gemAmount: 330, sortOrder: 3 },
+  { id: 4, code: 'GEM_700', name: '젬 700개', priceKrw: 11_000, gemAmount: 700, sortOrder: 4 },
+  { id: 5, code: 'GEM_2400', name: '젬 2,400개', priceKrw: 33_000, gemAmount: 2_400, sortOrder: 5 },
+  {
+    id: 6,
+    code: 'MONTHLY_PASS',
+    name: '월정액 (30일)',
+    priceKrw: 5_500,
+    gemAmount: 300,
+    sortOrder: 6,
+  },
 ] as const;
 
 export const SEED_ADMINS: { email: string; name: string; roleCode: RoleCode }[] = [
@@ -223,6 +251,17 @@ export async function seedCore(db: Executor, opts: SeedCoreOptions): Promise<voi
     .insert(items)
     .values([...SEED_ITEMS])
     .onDuplicateKeyUpdate({ set: { name: sql`values(${items.name})` } });
+  await db
+    .insert(products)
+    .values([...SEED_PRODUCTS])
+    .onDuplicateKeyUpdate({
+      set: {
+        name: sql`values(${products.name})`,
+        priceKrw: sql`values(${products.priceKrw})`,
+        gemAmount: sql`values(${products.gemAmount})`,
+        sortOrder: sql`values(${products.sortOrder})`,
+      },
+    });
 
   // 4-1) 랭킹 보드 (id 고정 — 1 아레나는 보드 도입 전 시즌들이 속한 곳)
   await db

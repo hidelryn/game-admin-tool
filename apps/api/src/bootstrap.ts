@@ -38,6 +38,9 @@ import { createScheduleService } from './modules/schedules/schedule.service.js';
 import { createNamedLock } from './infra/db/named-lock.js';
 import { isDemoEmail } from './modules/demo/is-demo.js';
 import { nextResetAt } from './modules/demo/demo-info.js';
+import { createPurchaseService } from './modules/analytics/purchase.service.js';
+import { createAnalyticsService } from './modules/analytics/analytics.service.js';
+import { analyticsRouter } from './modules/analytics/analytics.router.js';
 import { demoRouter } from './modules/demo/demo.router.js';
 import { schedulesRouter } from './modules/schedules/schedules.router.js';
 import { createMaintenanceService } from './modules/live-notices/maintenance.service.js';
@@ -124,6 +127,13 @@ export function buildServices(ctx: AppContext) {
     scheduleService,
     maintenanceService,
     noticeService,
+    purchaseService: createPurchaseService({ db }),
+    analyticsService: createAnalyticsService({
+      db,
+      redis: ctx.redis,
+      logger,
+      tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
+    }),
     auditService: createAuditService({ db }),
     dashboardService: createDashboardService({
       db,
@@ -177,6 +187,7 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
   api.use(rankingsRouter({ rankingService: s.rankingService, idempotency, authenticate }));
   api.use(auditRouter({ auditService: s.auditService, authenticate }));
   api.use(dashboardRouter({ dashboardService: s.dashboardService, authenticate }));
+  api.use(analyticsRouter({ analyticsService: s.analyticsService, authenticate }));
   api.use(assetsRouter({ assetService: s.assetService, authenticate }));
   api.use(demoRouter({ env }));
   api.use(schedulesRouter({ scheduleService: s.scheduleService, idempotency, authenticate }));
@@ -201,6 +212,7 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
         scheduleService: s.scheduleService,
         maintenanceService: s.maintenanceService,
         noticeService: s.noticeService,
+        purchaseService: s.purchaseService,
       }),
     );
     logger.warn(
