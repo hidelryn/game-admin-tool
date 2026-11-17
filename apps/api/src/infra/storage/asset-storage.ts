@@ -13,7 +13,8 @@ export interface AssetStorage {
   clear(): Promise<number>;
 }
 
-export const ASSET_KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp)$/;
+export const ASSET_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp)$/;
 
 function assertKey(key: string) {
   if (!ASSET_KEY_PATTERN.test(key)) throw new Error(`invalid asset key: ${key}`);
