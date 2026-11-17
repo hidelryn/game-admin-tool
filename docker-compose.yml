@@ -1,0 +1,126 @@
+# 로컬 개발 환경
+#   인프라만:      docker compose up -d mysql redis   (앱은 npm run dev 로 실행)
+#   전체 컨테이너:  docker compose --profile app up -d --build
+name: game-admin
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?set in .env}
+      MYSQL_USER: ${MYSQL_USER:?set in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      TZ: UTC
+    ports:
+      - '127.0.0.1:${MYSQL_PORT:-3306}:3306' # 로컬에서만 접근
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--maxmemory',
+        '128mb',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: http://localhost:8080
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  mcp:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/mcp.Dockerfile
+    restart: unless-stopped
+    # DB·Redis 정보는 넘기지 않는다 — API 주소와 허용 Host 만
+    environment:
+      NODE_ENV: production
+      GAME_ADMIN_API_URL: http://api:4000
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 4100
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8080:80'
+    depends_on:
+      api: { condition: service_healthy }
+      mcp: { condition: service_started }
+
+volumes:
+  mysql-data:
+  redis-data:

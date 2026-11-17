@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# 업로드 이미지 (로컬 저장소)
+storage/
+
+# 테스트 출력 저장본
+*-output.txt

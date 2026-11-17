@@ -1,0 +1,68 @@
+# 운영용 (TLS). nginx 공식 이미지가 시작할 때 ${DOMAIN} 을 환경변수로 채운다.
+# 로컬 컨테이너용 HTTP 설정은 nginx.conf (이미지에 포함)
+
+server {
+  listen 80;
+  server_name ${DOMAIN};
+  server_tokens off;
+
+  # 인증서 발급·갱신 확인용
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name ${DOMAIN};
+  server_tokens off;
+
+  ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_session_cache shared:SSL:5m;
+  ssl_session_timeout 1d;
+
+  add_header Strict-Transport-Security "max-age=31536000" always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header X-Frame-Options DENY always;
+  add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+  client_max_body_size 3m;
+
+  location /api/ {
+    proxy_pass http://api:4000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  # 원격 MCP (Streamable HTTP, stateless)
+  location = /mcp {
+    proxy_pass http://mcp:4100;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_read_timeout 60s;
+  }
+
+  location /assets/ {
+    root /usr/share/nginx/html;
+    expires 30d;
+    add_header Cache-Control "public, immutable";
+  }
+
+  location / {
+    root /usr/share/nginx/html;
+    try_files $uri /index.html;
+  }
+}

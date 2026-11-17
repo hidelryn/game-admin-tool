@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1794293800910,
+      "tag": "0000_chilly_phalanx",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1794300870513,
+      "tag": "0001_material_raza",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1794321314503,
+      "tag": "0002_brief_invaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1794465186223,
+      "tag": "0003_cultured_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1794735667026,
+      "tag": "0004_graceful_thena",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1794738186922,
+      "tag": "0005_powerful_catseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1794756760302,
+      "tag": "0006_huge_franklin_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1794797870743,
+      "tag": "0007_powerful_johnny_storm",
+      "breakpoints": true
+    }
+  ]
+}

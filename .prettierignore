@@ -1,0 +1,6 @@
+package-lock.json
+dist
+coverage
+apps/api/drizzle
+# 문서(마크다운)는 표·줄바꿈을 손으로 관리
+*.md

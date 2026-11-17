@@ -1,0 +1,72 @@
+# 수동 배포 — Actions 탭에서 실행 → production 환경 승인 → EC2 에 SSH 로 배포 (docs/deployment.md)
+# 필요한 저장소 비밀값: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '배포할 이미지 태그 (커밋 해시 앞 7자리, CI 의 이미지 빌드가 끝난 커밋)'
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: 운영 배포 (${{ inputs.tag }})
+    runs-on: ubuntu-latest
+    environment: production # 저장소 설정에서 승인자(Required reviewers)를 지정하면 승인 후 진행
+    timeout-minutes: 20
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: 태그 형식 확인
+        run: |
+          [[ "$TAG" =~ ^[0-9a-f]{7,40}$ ]] || { echo "태그는 커밋 해시여야 합니다: $TAG"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            deploy
+            docker/nginx
+            docker/mysql
+          sparse-checkout-cone-mode: false
+
+      - name: SSH 준비
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # 서버 지문을 미리 등록해 두고 확인 (중간자 공격 방지 — StrictHostKeyChecking 기본값 유지)
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: 배포 파일 복사
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$TARGET" 'mkdir -p /opt/game-admin/docker'
+          scp -i ~/.ssh/id_deploy deploy/docker-compose.prod.yml deploy/deploy.sh "$TARGET:/opt/game-admin/"
+          scp -i ~/.ssh/id_deploy -r docker/nginx docker/mysql "$TARGET:/opt/game-admin/docker/"
+
+      - name: 이미지 받기·마이그레이션·재시작·상태 확인
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prefix=$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')
+          # 이 작업 동안만 유효한 토큰으로 GHCR 로그인 (서버에 영구 토큰을 두지 않음)
+          echo "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+          ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "cd /opt/game-admin && chmod +x deploy.sh && IMAGE_PREFIX='$prefix' ./deploy.sh '$TAG'"
+          ssh -i ~/.ssh/id_deploy "$TARGET" 'docker logout ghcr.io' || true
