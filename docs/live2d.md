@@ -32,6 +32,11 @@
 2. zip 의 `runtime/` **안쪽** 내용을 아래로 복사한다.
    - 로컬: `apps/web/public/live2d/haru/`
    - 운영 서버: 배포 디렉터리의 `live2d/haru/` (compose 가 웹 컨테이너 `/usr/share/nginx/html/live2d` 에 읽기 전용으로 붙인다)
-3. 확인: 브라우저에서 `/live2d/haru/haru_greeter_t05.model3.json` 이 열리면 된다.
+3. **읽기 권한 열기** (Windows 에서 scp 로 올리면 폴더가 `drwx------` 로 잡혀 nginx 가 못 읽는다 → 모델 대신 index.html 이 와서 `Unexpected token '<'` 오류)
+   ```bash
+   chmod -R a+rX /opt/game-admin/live2d
+   ```
+4. 확인: 브라우저에서 `/live2d/haru/haru_greeter_t05.model3.json` 이 JSON 으로 열리면 된다.
+   - 운영 nginx 는 `/live2d/` 에서 파일이 없으면 404 를 준다 (index.html 로 대신 응답하지 않음). 예전에 실패한 응답이 브라우저에 남아 있으면 캐시를 지우거나 시크릿 창으로 확인
 
 `.cmo3`·`.can3`·`.psd` (편집용 원본) 는 웹에 필요 없으니 넣지 않는다.
