@@ -842,3 +842,11 @@ API 변경 없음. 화면 placeholder(ComingSoon) 전부 실제 화면으로 교
 - 실시간 활동은 최근 3일 접속 회원만 샘플 (떠난 회원이 되살아나면 이탈 분석이 흐려짐)
 - 차트: 한 축만(이탈은 비율 막대, 인원은 표), 리텐션은 단일 색 명도, "표로 보기"
 - 마이그레이션 0008 (products·purchases·users.max_stage) — drizzle-kit 으로 생성
+
+### Phase 7 실제 배포 (2026-11-18)
+
+- 오라클 프리티어 시도 → 무료 한도 축소 + 도쿄 용량 부족으로 실패 → AWS EC2(t3.small) 로 전환
+- AWS 새 가입 방식이 리전을 시드니로 자동 배정 → 그대로 사용
+- 서버 `.env` 는 서버에서 openssl 로 생성 (비밀값이 PC·채팅을 거치지 않게), 배포 키·known_hosts 도 서버에서 생성
+- 막힌 것: Actions SSH 타임아웃(보안 그룹 22번) → 키 전용 확인 후 전체 허용 / Live2D 폴더 권한 → chmod + nginx `/live2d/` 404 처리
+- 개선 후보: SSM Run Command + GitHub OIDC 로 22번 닫기
