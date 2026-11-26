@@ -18,5 +18,6 @@ coverage/
 # 테스트 출력 저장본
 *-output.txt
 
-# Live2D 샘플 모델 (Live2D 무상 제공 머티리얼 — 재배포 조건 확인 전까지 저장소에 넣지 않음, docs/live2d.md)
+
+# 예전 안내 캐릭터용 Live2D 샘플 모델 (2026-11-26 제거) — 재배포 조건 때문에 절대 커밋하지 않음
 apps/web/public/live2d/

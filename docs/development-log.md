@@ -850,3 +850,9 @@ API 변경 없음. 화면 placeholder(ComingSoon) 전부 실제 화면으로 교
 - 서버 `.env` 는 서버에서 openssl 로 생성 (비밀값이 PC·채팅을 거치지 않게), 배포 키·known_hosts 도 서버에서 생성
 - 막힌 것: Actions SSH 타임아웃(보안 그룹 22번) → 키 전용 확인 후 전체 허용 / Live2D 폴더 권한 → chmod + nginx `/live2d/` 404 처리
 - 개선 후보: SSM Run Command + GitHub OIDC 로 22번 닫기
+
+### 안내 캐릭터(Live2D) 제거 (2026-11-26)
+
+- 사용자 결정: 로그인 화면 → 메뉴 투어 순으로 Live2D 캐릭터 제거. 투어는 글로만 안내
+- 함께 정리: `GuideCharacter.tsx`·`live2d-stage.ts`, `pixi.js`·`pixi-live2d-display-lipsyncpatch`, 운영 Compose 의 `./live2d` 볼륨, nginx `/live2d/` 경로, `docs/live2d.md`
+- 서버 `/opt/game-admin/live2d` 폴더와 로컬 `apps/web/public/live2d/` 는 더 쓰지 않음 (직접 삭제)

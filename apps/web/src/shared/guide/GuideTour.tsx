@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import { Flex, Tour, Typography, type TourProps } from 'antd';
+import { Tour, Typography, type TourProps } from 'antd';
 import { Permission } from '@game-admin/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { GUIDE_CREDIT, GUIDE_NAME, GuideCharacter, type GuideExpression } from './GuideCharacter';
 
 interface Stop {
   /** 메뉴 키(경로). 없으면 화면 가운데 */
@@ -12,15 +11,13 @@ interface Stop {
   permission?: Permission;
   title: string;
   text: string;
-  expression?: GuideExpression;
 }
 
 /** 투어 순서 — 권한이 없는 메뉴는 건너뛴다 */
 const STOPS: Stop[] = [
   {
-    title: `안녕하세요, ${GUIDE_NAME}예요!`,
+    title: '백오피스 둘러보기',
     text: '게임 운영 백오피스를 한 바퀴 안내해 드릴게요. 언제든 위의 "둘러보기"로 다시 볼 수 있어요.',
-    expression: 'smile',
   },
   {
     key: '/dashboard',
@@ -33,7 +30,6 @@ const STOPS: Stop[] = [
     permission: Permission.ANALYTICS_READ,
     title: '유저 분석',
     text: '회원이 몇 스테이지에서 많이 떠나는지, 언제 처음 결제하는지, 재화를 어디에 쓰는지 봐요. 20·45·80 스테이지의 난이도 벽이 바로 보일 거예요.',
-    expression: 'wink',
   },
   {
     key: '/users',
@@ -46,7 +42,6 @@ const STOPS: Stop[] = [
     permission: Permission.CURRENCY_READ,
     title: '재화 관리',
     text: '지급·회수와 원장(모든 변동 기록)을 다뤄요. 회수나 큰 금액은 미리보기로 한 번 확인하고, 100명 이상 대량 지급은 빨간 경고가 한 번 더 떠요.',
-    expression: 'alert',
   },
   {
     key: '/mails',
@@ -71,7 +66,6 @@ const STOPS: Stop[] = [
     permission: Permission.NOTICE_READ,
     title: '점검·공지',
     text: '점검을 걸면 게임 접속이 막히고 접속 중인 유저는 끊겨요. 긴급 점검은 꼭 확인을 한 번 더 받아요. 공지와 로비 한 줄 공지도 여기서요.',
-    expression: 'alert',
   },
   {
     key: '/audit-logs',
@@ -89,7 +83,6 @@ const STOPS: Stop[] = [
     selector: '[data-tour="tour-button"]',
     title: '안내 끝!',
     text: '이제 자유롭게 눌러 보세요. 체험 데이터는 매일 새벽 처음 상태로 돌아가니 마음껏 해 보셔도 괜찮아요.',
-    expression: 'wink',
   },
 ];
 
@@ -105,20 +98,7 @@ export function GuideTour({ open, onClose }: { open: boolean; onClose(): void })
     const list = STOPS.filter((s) => !s.permission || can(s.permission));
     return list.map((s, i): Step => ({
       title: s.title,
-      description: (
-        <Flex gap={12} align="center">
-          <GuideCharacter expression={s.expression ?? 'normal'} size={110} />
-          <Flex vertical gap={4}>
-            <Typography.Paragraph style={{ margin: 0 }}>{s.text}</Typography.Paragraph>
-            {i === 0 && (
-              // Live2D 샘플 모델 저작권 표기 (로그인 화면에서 캐릭터를 뺀 뒤로는 투어에서 표시)
-              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                {GUIDE_CREDIT}
-              </Typography.Text>
-            )}
-          </Flex>
-        </Flex>
-      ),
+      description: <Typography.Paragraph style={{ margin: 0 }}>{s.text}</Typography.Paragraph>,
       placement: s.key ? 'right' : 'bottom',
       // 요소를 못 찾으면(메뉴 접힘 등) 화면 가운데에 띄운다
       target: (s.key

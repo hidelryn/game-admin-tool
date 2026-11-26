@@ -61,13 +61,6 @@ server {
     add_header Cache-Control "public, immutable";
   }
 
-  # Live2D 모델 (서버에 직접 복사, docs/live2d.md) — 없거나 못 읽으면 404.
-  # 화면 주소처럼 index.html 로 돌려주면 브라우저가 그 HTML 을 모델 파일로 캐시해 버린다
-  location /live2d/ {
-    root /usr/share/nginx/html;
-    try_files $uri =404;
-  }
-
   location / {
     root /usr/share/nginx/html;
     try_files $uri /index.html;

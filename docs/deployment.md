@@ -20,7 +20,7 @@
 | 오라클 프리티어 A1 생성 실패 | 2026년 무료 한도 축소(2 OCPU·12GB) + 도쿄 리전 용량 부족(out of capacity) | 재시도 스크립트를 만들었으나 빨리 띄우려고 AWS 로 전환 |
 | AWS 에서 서울 리전 선택 불가 | 2026-09 새 가입 방식("Sign up for AWS (new)")은 프로젝트 리전을 연락처 국가 기준으로 자동 배정, 무료 플랜에선 변경 불가 | 시드니 사용 (한국에서 응답 0.1초대 추가, 데모엔 충분). 서울이 필요하면 유료 플랜 + 지출 한도 |
 | Deploy 의 SSH 타임아웃 | 보안 그룹 22번을 "내 IP 만" 열어 GitHub Actions 러너가 못 들어옴 | 22번 전체 허용 (**키 전용 로그인 확인**). 실무 대안은 3.1 참고 |
-| 하루(Live2D)가 안 보임 | Windows 에서 scp 로 올린 폴더 권한이 `drwx------` → nginx 가 못 읽고 index.html 로 대체 응답 → 브라우저가 그 HTML 을 캐시 | `chmod -R a+rX live2d`, nginx `/live2d/` 는 없으면 404 (index.html 대체 금지), 브라우저 캐시 삭제 |
+| 안내 캐릭터(Live2D)가 안 보임 | Windows 에서 scp 로 올린 폴더 권한이 `drwx------` → nginx 가 못 읽고 index.html 로 대체 응답 → 브라우저가 그 HTML 을 캐시 | 권한 수정 + 정적 경로는 없으면 404. 이후(2026-11-26) 캐릭터 자체를 제거 |
 | CI 첫 실패 | `.gitignore` 의 `storage/` 가 소스 폴더 `infra/storage` 까지 무시 | 업로드 폴더만 무시하도록 경로 고정 |
 
 ## 0. 한눈에 보기
@@ -100,8 +100,8 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker ubuntu   # 다시 접속하면 sudo 없이 docker 사용
 
-# 배포 폴더 (+ Live2D 모델 폴더)
-sudo mkdir -p /opt/game-admin/live2d && sudo chown -R ubuntu:ubuntu /opt/game-admin
+# 배포 폴더
+sudo mkdir -p /opt/game-admin && sudo chown -R ubuntu:ubuntu /opt/game-admin
 ```
 
 Windows 에서 SSH 키(.pem) 권한이 넓으면 접속이 거부된다:
@@ -224,19 +224,7 @@ docker compose -f docker-compose.prod.yml run --rm -e NODE_ENV=development api n
 - 끝나면 `.env` 에서 지운다: `sed -i '/^SEED_ADMIN_PASSWORD=/d' /opt/game-admin/.env`
 - 가상 데이터 시드는 production 에서 막혀 있어 이 한 번만 `NODE_ENV=development` 로 실행한다. 실제 게임 데이터는 쓰지 않는다 (CLAUDE.md 보안 원칙).
 
-### 6.3 Live2D 모델 (git 에 없음 — docs/live2d.md)
-
-```powershell
-# 내 PC (전체 경로로)
-scp -i <키.pem> -r <프로젝트>\apps\web\public\live2d\haru ubuntu@<서버>:/opt/game-admin/live2d/
-```
-
-```bash
-# 서버 — Windows scp 는 폴더를 drwx------ 로 만들어 nginx 가 못 읽는다
-chmod -R a+rX /opt/game-admin/live2d
-```
-
-### 6.4 확인
+### 6.3 확인
 
 - 백오피스: `https://<도메인>`
 - MCP: 웹에서 API 토큰 발급 → `claude mcp add --transport http game-admin https://<도메인>/mcp --header "Authorization: Bearer <토큰>"`

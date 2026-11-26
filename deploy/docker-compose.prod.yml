@@ -134,8 +134,6 @@ services:
       - ./docker/nginx/prod.conf.template:/etc/nginx/templates/default.conf.template:ro
       - letsencrypt:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
-      # Live2D 안내 캐릭터 모델 (저장소에 없음 — 서버에 직접 복사, docs/live2d.md). 없으면 자리표시로 뜬다
-      - ./live2d:/usr/share/nginx/html/live2d:ro
     command:
       [
         '/bin/sh',

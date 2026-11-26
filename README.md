@@ -27,7 +27,7 @@ Node.js · TypeScript · Express · MySQL · Redis · React · Vite · MCP TypeS
 | [MCP Tool](docs/mcp-tools.md) | Tool 명세 |
 | [테스트](docs/testing.md) | 테스트 전략·실행 방법·결과 |
 | [유저 분석](docs/analytics.md) | 이탈 구간·리텐션·과금·재화 소비처, 가상 플레이 모델 |
-| [체험 모드·안내 캐릭터](docs/demo-mode.md) | 공개 체험 계정, 매일 초기화, 메뉴 투어 |
+| [체험 모드](docs/demo-mode.md) | 공개 체험 계정, 매일 초기화, 메뉴 투어 |
 | [배포](docs/deployment.md) | CI(GitHub Actions)·이미지(GHCR)·EC2 수동 배포·백업 |
 | [개발 로그](docs/development-log.md) | 진행 기록, 결정 사항, 일정 |
 | 배포 | `docs/deployment.md` — Phase 7에서 작성 |
