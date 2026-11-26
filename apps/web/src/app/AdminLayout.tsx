@@ -4,6 +4,7 @@ import {
   CalendarOutlined,
   DashboardOutlined,
   FundOutlined,
+  SendOutlined,
   DollarOutlined,
   FileSearchOutlined,
   KeyOutlined,
@@ -47,6 +48,7 @@ const MENU: { key: string; label: string; icon: ReactNode; permission?: Permissi
     permission: Permission.CURRENCY_READ,
   },
   { key: '/mails', label: '우편 관리', icon: <MailOutlined />, permission: Permission.MAIL_READ },
+  { key: '/emails', label: '이메일', icon: <SendOutlined />, permission: Permission.EMAIL_READ },
   {
     key: '/rankings',
     label: '랭킹',

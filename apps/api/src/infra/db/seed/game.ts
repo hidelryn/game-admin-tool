@@ -238,6 +238,11 @@ export async function seedGame(
         email: `player${n}@example.com`,
         level: Math.max(1, Math.round(state.maxStage * 0.6) + int(0, 4)),
         maxStage: state.maxStage,
+        // 광고 메일 수신 동의 약 55%, 그중 야간 동의 약 20%
+        ...(() => {
+          const ad = rand() < 0.55;
+          return { adEmailOptIn: ad, nightOptIn: ad && rand() < 0.2 };
+        })(),
         status,
         registeredAt,
         lastLoginAt,
@@ -307,6 +312,8 @@ export const GAME_TABLES = [
   'mails',
   'user_items',
   'purchases',
+  'email_deliveries',
+  'email_campaigns',
   'currency_transactions',
   'user_currencies',
   'user_activity_logs',

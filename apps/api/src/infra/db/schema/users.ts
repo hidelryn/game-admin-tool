@@ -1,4 +1,4 @@
-import { index, int, json, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
+import { boolean, index, int, json, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 import { createdAt, dt, fk, pk, updatedAt } from './columns.js';
 
 /** 게임 회원(플레이어). 운영자(admins)와 다르다 */
@@ -12,6 +12,9 @@ export const users = mysqlTable(
     level: int('level', { unsigned: true }).notNull().default(1),
     /** 최고 클리어 스테이지 (STAGE_CLEAR 이벤트로 갱신) — 이탈·과금 구간 분석용 */
     maxStage: int('max_stage', { unsigned: true }).notNull().default(0),
+    /** 광고성 이메일 수신 동의 / 야간(21~08시) 광고 수신 동의 — docs/email.md */
+    adEmailOptIn: boolean('ad_email_opt_in').notNull().default(false),
+    nightOptIn: boolean('night_opt_in').notNull().default(false),
     status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
     registeredAt: dt('registered_at').notNull(),
     lastLoginAt: dt('last_login_at'),

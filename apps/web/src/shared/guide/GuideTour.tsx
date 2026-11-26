@@ -63,6 +63,12 @@ const STOPS: Stop[] = [
     text: '랭킹 시즌과 이벤트 기간, 게임 안 팝업·배너를 달력에서 관리해요.',
   },
   {
+    key: '/emails',
+    permission: Permission.EMAIL_READ,
+    title: '이메일',
+    text: '회원에게 이메일을 보내요. 회원 주소는 가상이라 기록만 남고, "주소 직접 입력"을 고르면 내 메일함으로 실제 메일을 받아 볼 수 있어요.',
+  },
+  {
     key: '/live-notices',
     permission: Permission.NOTICE_READ,
     title: '점검·공지',

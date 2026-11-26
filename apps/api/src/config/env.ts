@@ -85,6 +85,36 @@ const EnvSchema = z
     DEMO_DAILY_RESET: bool.default('false'),
     /** 체험 모드 가상 활동: 5분마다 이만큼의 회원이 접속·재화 획득/소비 (0 = 끔). DEMO_MODE 일 때만 */
     DEMO_ACTIVITY_USERS: z.coerce.number().int().min(0).max(200).default(30),
+
+    /**
+     * 이메일 발송 (docs/email.md) — SMTP 4개가 모두 있으면 실제 발송, 없으면 전부 가상 발송
+     * 예: Brevo 무료 SMTP (smtp-relay.brevo.com:587, 로그인·SMTP 키, 인증한 발신 주소)
+     */
+    SMTP_HOST: z
+      .string()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    SMTP_USER: z
+      .string()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    SMTP_PASS: z
+      .string()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    /** 발신자. 예: "Game Admin <me@example.com>" — SMTP 서비스에서 인증한 주소 */
+    MAIL_FROM: z
+      .string()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    /** 회원 대상 발송 중 실제로 보낼 주소 (회원 주소는 가상이라 기본은 전부 가상 발송) */
+    EMAIL_REAL_ALLOWLIST: csv,
+    /** 하루 실제 발송 상한 (무료 SMTP 한도 보호, Brevo 무료 = 300/일) */
+    EMAIL_DAILY_REAL_LIMIT: z.coerce.number().int().min(0).max(10_000).default(250),
+    /** 체험 계정 주소 직접 입력 발송: 하루 전체 / IP 당 시간당 */
+    DEMO_EMAIL_DAILY_LIMIT: z.coerce.number().int().min(0).max(1_000).default(50),
+    DEMO_EMAIL_PER_IP_HOUR: z.coerce.number().int().min(1).max(100).default(3),
   })
   .superRefine((v, ctx) => {
     if (v.DEMO_MODE && !passwordPolicySchema.safeParse(v.DEMO_ACCOUNT_PASSWORD).success) {
@@ -92,6 +122,14 @@ const EnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ['DEMO_ACCOUNT_PASSWORD'],
         message: 'DEMO_MODE 를 켜면 체험 계정 비밀번호(10자 이상, 영문·숫자 포함)가 필요합니다.',
+      });
+    }
+    const smtp = [v.SMTP_HOST, v.SMTP_USER, v.SMTP_PASS, v.MAIL_FROM];
+    if (smtp.some(Boolean) && !smtp.every(Boolean)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SMTP_HOST'],
+        message: 'SMTP_HOST·SMTP_USER·SMTP_PASS·MAIL_FROM 은 모두 채우거나 모두 비워야 합니다.',
       });
     }
     if (v.DEMO_DAILY_RESET && !v.DEMO_MODE) {

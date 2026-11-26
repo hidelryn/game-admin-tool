@@ -71,6 +71,10 @@ export const ErrorCode = {
   NOTICE_NOT_EDITABLE: 'NOTICE_NOT_EDITABLE',
   /** 공개 체험 계정으로는 할 수 없는 작업 (비밀번호 변경·토큰 발급) */
   DEMO_RESTRICTED: 'DEMO_RESTRICTED',
+  EMAIL_CAMPAIGN_NOT_FOUND: 'EMAIL_CAMPAIGN_NOT_FOUND',
+  EMAIL_NOT_CANCELABLE: 'EMAIL_NOT_CANCELABLE',
+  /** 체험 계정 메일의 링크·길이 제한 */
+  EMAIL_CONTENT_NOT_ALLOWED: 'EMAIL_CONTENT_NOT_ALLOWED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

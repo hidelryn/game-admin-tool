@@ -50,6 +50,10 @@ export const AuditAction = {
   NOTICE_HIDE: 'NOTICE_HIDE',
   /** 체험 서버 매일 초기화 (SYSTEM) */
   DEMO_RESET: 'DEMO_RESET',
+  EMAIL_SEND: 'EMAIL_SEND',
+  /** 전체·100명 이상 (L3) */
+  EMAIL_SEND_ALL: 'EMAIL_SEND_ALL',
+  EMAIL_CANCEL: 'EMAIL_CANCEL',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
@@ -66,6 +70,7 @@ export const AuditTargetType = {
   ASSET: 'ASSET',
   MAINTENANCE: 'MAINTENANCE',
   NOTICE: 'NOTICE',
+  EMAIL_CAMPAIGN: 'EMAIL_CAMPAIGN',
 } as const;
 
 export type AuditTargetType = (typeof AuditTargetType)[keyof typeof AuditTargetType];

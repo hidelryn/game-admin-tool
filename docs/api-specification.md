@@ -195,6 +195,19 @@ CS 역할처럼 "본인 작업만" 조회 가능한 경우, 서비스 계층에�
 
 결과는 Redis에 10분 캐시.
 
+### 2.10-2 이메일 (emails) — docs/email.md
+
+| Method | Path | 설명 | 권한 |
+|---|---|---|---|
+| GET | `/emails` | 발송 기록 `?status&page&size` | `email:read` |
+| GET | `/emails/limits` | SMTP 설정 여부, 체험 계정 제한 | `email:read` |
+| GET | `/emails/:id` | 상세 | `email:read` |
+| GET | `/emails/:id/deliveries` | 수신자별 결과 (주소 마스킹) | `email:read` |
+| POST | `/emails/preview` | 실제·가상·제외 인원 미리보기 | `email:send` |
+| POST | `/emails/render` | 보낼 디자인 그대로 제목·HTML (메일 미리보기) | `email:send` |
+| POST | `/emails` | 발송 `{ target: USERS\|ALL\|ADDRESS, subject, body, isAd, scheduledAt?, reason }` — 전체·100명↑ L3(웹 전용), 주소 직접 입력은 웹 전용 | `email:send` (+ 전체 `email:send_all`) |
+| POST | `/emails/:id/cancel` | 예약 취소 | `email:send` |
+
 ### 2.11 시스템
 
 | Method | Path | 설명 | 권한 |

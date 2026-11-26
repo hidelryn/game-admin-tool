@@ -392,3 +392,9 @@ COMMIT;
 - `purchases`: 결제 기록 — append only, FK 없음. 결제 당시 가격·젬·스테이지를 그대로 남김. `IDX(purchased_at)`, `IDX(user_id, purchased_at)`
 - `currency_transactions.source` 에 `PURCHASE` 추가 (결제로 받은 유료 젬)
 - 시드: 순서대로 진행 + 난이도 벽 모델. 기간 이전은 상태만 계산하고 잔액을 "이전 기록 이월" 1건으로 남김 (원장 합계 = 잔액)
+
+### 이메일 발송 (2026-11-26 추가) — docs/email.md
+
+- `email_campaigns`: 대상·제목·본문·광고 여부·상태(SCHEDULED→SENDING→DONE / CANCELED)·예약 시각·결과 집계. `IDX(status, scheduled_at)` (Worker 가 1분마다 시각이 된 것을 조회)
+- `email_deliveries`: 수신자별 결과 — append only, FK 없음. `UK(campaign_id, user_id)` 로 재시작해도 같은 회원에게 두 번 보내지 않음
+- `users.ad_email_opt_in`, `users.night_opt_in`: 광고성 메일 수신 동의, 야간 수신 동의

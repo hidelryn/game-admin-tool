@@ -49,6 +49,7 @@ export const DangerAction = {
   RANKING_RESET: 'RANKING_RESET',
   RANKING_RESTORE: 'RANKING_RESTORE',
   RANKING_REWARD: 'RANKING_REWARD',
+  EMAIL_SEND_BULK: 'EMAIL_SEND_BULK',
 } as const;
 export type DangerAction = (typeof DangerAction)[keyof typeof DangerAction];
 

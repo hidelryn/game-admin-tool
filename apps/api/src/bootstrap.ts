@@ -41,6 +41,9 @@ import { nextResetAt } from './modules/demo/demo-info.js';
 import { createPurchaseService } from './modules/analytics/purchase.service.js';
 import { createAnalyticsService } from './modules/analytics/analytics.service.js';
 import { analyticsRouter } from './modules/analytics/analytics.router.js';
+import { createMailer, type Mailer } from './infra/mail/mailer.js';
+import { createEmailService } from './modules/emails/email.service.js';
+import { emailsRouter } from './modules/emails/emails.router.js';
 import { demoRouter } from './modules/demo/demo.router.js';
 import { schedulesRouter } from './modules/schedules/schedules.router.js';
 import { createMaintenanceService } from './modules/live-notices/maintenance.service.js';
@@ -54,6 +57,10 @@ export interface AppContext {
   redis: RedisHandle;
   /** 업로드 파일 저장소. 없으면 로컬 폴더(ASSET_STORAGE_DIR) — 테스트는 메모리 저장소를 넣는다 */
   assetStorage?: AssetStorage;
+  /** 메일 발송기. 없으면 env 의 SMTP 설정으로 만든다 — 테스트는 가짜 메일러를 넣는다 */
+  mailer?: Mailer;
+  /** 즉시 이메일 발송을 요청 직후 백그라운드 처리 (기본 true, 테스트는 false) */
+  emailAutoDispatch?: boolean;
 }
 
 /**
@@ -128,6 +135,16 @@ export function buildServices(ctx: AppContext) {
     maintenanceService,
     noticeService,
     purchaseService: createPurchaseService({ db }),
+    emailService: createEmailService({
+      db,
+      redis: ctx.redis,
+      logger,
+      env,
+      confirmation,
+      mailer: ctx.mailer ?? createMailer(env),
+      isDemo: (email) => isDemoEmail(env, email),
+      autoDispatch: ctx.emailAutoDispatch,
+    }),
     analyticsService: createAnalyticsService({
       db,
       redis: ctx.redis,
@@ -188,6 +205,22 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
   api.use(auditRouter({ auditService: s.auditService, authenticate }));
   api.use(dashboardRouter({ dashboardService: s.dashboardService, authenticate }));
   api.use(analyticsRouter({ analyticsService: s.analyticsService, authenticate }));
+  const demoEmailLimit = createRateLimit({
+    redis: ctx.redis,
+    logger,
+    name: 'demo-email-address',
+    limit: env.DEMO_EMAIL_PER_IP_HOUR,
+    windowSec: 3600,
+  });
+  api.use(
+    emailsRouter({
+      emailService: s.emailService,
+      idempotency,
+      authenticate,
+      demoAddressLimit: (req, res, next) =>
+        req.auth && isDemoEmail(env, req.auth.email) ? demoEmailLimit(req, res, next) : next(),
+    }),
+  );
   api.use(assetsRouter({ assetService: s.assetService, authenticate }));
   api.use(demoRouter({ env }));
   api.use(schedulesRouter({ scheduleService: s.scheduleService, idempotency, authenticate }));

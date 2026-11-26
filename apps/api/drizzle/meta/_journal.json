@@ -64,6 +64,20 @@
       "when": 1794932849355,
       "tag": "0008_slimy_ken_ellis",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1795675263504,
+      "tag": "0009_lucky_pride",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1795676057530,
+      "tag": "0010_smart_dark_phoenix",
+      "breakpoints": true
     }
   ]
 }

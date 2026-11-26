@@ -23,6 +23,9 @@ export const Permission = {
   NOTICE_READ: 'notice:read',
   NOTICE_MANAGE: 'notice:manage',
   ANALYTICS_READ: 'analytics:read',
+  EMAIL_READ: 'email:read',
+  EMAIL_SEND: 'email:send',
+  EMAIL_SEND_ALL: 'email:send_all',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];

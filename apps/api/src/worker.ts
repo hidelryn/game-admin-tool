@@ -87,6 +87,10 @@ const jobs: Record<string, (job: Job) => Promise<unknown>> = {
   async 'demo-activity'() {
     return runDemoActivity({ db: db.db, ...services }, { users: env.DEMO_ACTIVITY_USERS });
   },
+  /** 이메일: 예약 시각이 된 발송 + 처리하다 멈춘 발송 (1분) — docs/email.md */
+  async 'email-dispatch'() {
+    return services.emailService.dispatchDue();
+  },
   /** 진행 중 시즌 랭킹 재구성 (10분) — Redis 동기화 실패 등으로 어긋난 부분 자가 복구 */
   async 'ranking-reconcile'() {
     return { seasons: await services.rankingService.reconcileActive() };
@@ -138,6 +142,7 @@ await queue.upsertJobScheduler(
   { name: 'ranking-reconcile' },
 );
 await queue.upsertJobScheduler('season-lifecycle', { every: 60_000 }, { name: 'season-lifecycle' });
+await queue.upsertJobScheduler('email-dispatch', { every: 60_000 }, { name: 'email-dispatch' });
 await queue.upsertJobScheduler(
   'maintenance-lifecycle',
   { every: 60_000 },

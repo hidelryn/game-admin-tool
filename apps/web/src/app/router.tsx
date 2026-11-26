@@ -12,6 +12,9 @@ import { CurrenciesPage } from '../features/currencies/CurrenciesPage';
 import { MailsPage } from '../features/mails/MailsPage';
 import { MailComposePage } from '../features/mails/MailComposePage';
 import { MailDetailPage } from '../features/mails/MailDetailPage';
+import { EmailsPage } from '../features/emails/EmailsPage';
+import { EmailComposePage } from '../features/emails/EmailComposePage';
+import { EmailDetailPage } from '../features/emails/EmailDetailPage';
 import { RankingsPage } from '../features/rankings/RankingsPage';
 import { AuditLogsPage } from '../features/audit/AuditLogsPage';
 import { AdminsPage } from '../features/admins/AdminsPage';
@@ -102,6 +105,30 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permissions={[Permission.MAIL_READ]}>
             <MailDetailPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'emails',
+        element: (
+          <RequirePermission permissions={[Permission.EMAIL_READ]}>
+            <EmailsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'emails/new',
+        element: (
+          <RequirePermission permissions={[Permission.EMAIL_SEND]}>
+            <EmailComposePage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'emails/:campaignId',
+        element: (
+          <RequirePermission permissions={[Permission.EMAIL_READ]}>
+            <EmailDetailPage />
           </RequirePermission>
         ),
       },

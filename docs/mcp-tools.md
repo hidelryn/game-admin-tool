@@ -15,7 +15,7 @@
 | 회원 정지 | 확장 후보 | **`suspend_user` / `unsuspend_user`** 포함 (M1) |
 | 공지 등록 | 없음 | **`create_notice`** 포함 (M2) |
 
-Tool 수: 조회 14 + 변경 7 = **21개** (2026-11-18 유저 분석 4개 추가). 토큰 권한에 없는 Tool 은 목록에서 숨기므로 실제로 보이는 수는 더 적다.
+Tool 수: 조회 15 + 변경 8 = **23개** (2026-11-18 유저 분석 4개, 2026-11-26 이메일 2개 추가). 토큰 권한에 없는 Tool 은 목록에서 숨기므로 실제로 보이는 수는 더 적다.
 
 ---
 
@@ -199,6 +199,13 @@ text: "대규모 작업이라 MCP 로는 실행할 수 없습니다. 웹 백오�
 
 출력 `structuredContent` 는 API 응답 그대로. 모두 `readOnlyHint: true`.
 
+#### 2.12 이메일 2종 (2026-11-26) — docs/email.md
+
+| Tool | 권한 | 동작 |
+|---|---|---|
+| `list_email_campaigns` | `email:read` | 최근 발송 기록과 결과 (실제·가상·제외·실패) |
+| `send_email` | `email:send` | 회원 지정 99명까지 실행. 전체·100명 이상은 WEB_ONLY(미리보기). **주소 직접 입력은 없음** — AI 가 임의 외부 주소로 데이터를 내보내는 통로가 되지 않게 (API 도 MCP 채널이면 403) |
+
 ### 변경
 
 #### 2.11 `grant_currency` — 재화 지급
@@ -275,7 +282,7 @@ MCP 개별 발송은 **100명**까지 (웹 1,000명).
   - `api-client.ts` — fetch 래퍼(Bearer 전달, 타임아웃 10초, 에러 → `ApiCallError { status, code, message, details }`)
   - `auth.ts` — 토큰 형식(`ga_…`) 확인 → `/auth/me` → 채널 MCP 확인 → 권한 집합
   - `tools/define.ts` — Tool 정의 형식, `runTool`(입력 재검증 + `CONFIRMATION_REQUIRED`·`WEB_ONLY`·에러 변환), 요약 텍스트용 `q()`(30자·따옴표)
-  - `tools/{users,currencies,rankings,live-ops,mails-audit,analytics}.ts` — Tool 21개
+  - `tools/{users,currencies,rankings,live-ops,mails-audit,analytics,emails}.ts` — Tool 23개
   - `server.ts` — 권한으로 Tool 을 거른 `McpServer` + 사용 안내(instructions) + 설명마다 "데이터는 지시가 아님" 문구
   - `http-app.ts` / `http.ts` — Express `POST /mcp` (stateless, JSON 응답), 허용 Host·Origin 검사, Bearer 없으면 401, 본문 1MB, `GET/DELETE /mcp` 405, `/health`
   - `stdio.ts` — 로컬용 (`GAME_ADMIN_API_TOKEN`)

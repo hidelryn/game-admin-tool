@@ -67,6 +67,15 @@ const ROUTES: [Method, string, Permission | null][] = [
   ['post', '/ranking-seasons/1/reset', Permission.RANKING_MANAGE],
   ['post', '/ranking-seasons/1/restore', Permission.RANKING_MANAGE],
   ['post', '/ranking-seasons/1/rewards', Permission.RANKING_MANAGE],
+  // 이메일
+  ['get', '/emails', Permission.EMAIL_READ],
+  ['get', '/emails/limits', Permission.EMAIL_READ],
+  ['get', '/emails/999999', Permission.EMAIL_READ],
+  ['get', '/emails/999999/deliveries', Permission.EMAIL_READ],
+  ['post', '/emails/preview', Permission.EMAIL_SEND],
+  ['post', '/emails/render', Permission.EMAIL_SEND],
+  ['post', '/emails', Permission.EMAIL_SEND],
+  ['post', '/emails/999999/cancel', Permission.EMAIL_SEND],
   // 유저 분석
   ['get', '/analytics/churn', Permission.ANALYTICS_READ],
   ['get', '/analytics/retention', Permission.ANALYTICS_READ],

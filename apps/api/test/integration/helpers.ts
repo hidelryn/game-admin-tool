@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createFakeMailer } from '../../src/infra/mail/mailer.js';
 import { and, eq } from 'drizzle-orm';
 import { expect, inject } from 'vitest';
 import request from 'supertest';
@@ -59,7 +60,16 @@ export async function createTestContext(
   const db = createDb(env);
   const redis = createRedis(env, logger);
   await redis.connect();
-  const ctx: AppContext = { env, logger, db, redis, assetStorage: createMemoryAssetStorage() };
+  const mailer = createFakeMailer({ failFor: ['fail@example.net'] });
+  const ctx: AppContext = {
+    env,
+    logger,
+    db,
+    redis,
+    assetStorage: createMemoryAssetStorage(),
+    mailer,
+    emailAutoDispatch: false,
+  };
   const hasher = createPasswordHasher({ memoryCost: 4096, timeCost: 2 });
   const passwordHash = await hasher.hash(TEST_PASSWORD);
 

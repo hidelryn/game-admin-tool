@@ -47,6 +47,9 @@ const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'notice:read': '공지 조회',
   'notice:manage': '공지 등록·수정·내리기',
   'analytics:read': '유저 분석(이탈·리텐션·과금·재화 소비처) 조회',
+  'email:read': '이메일 발송 기록 조회',
+  'email:send': '이메일 발송 (회원 지정·주소 직접 입력)',
+  'email:send_all': '이메일 전체 발송',
 };
 
 /** 기본 역할 권한 (architecture.md 4.3) */
@@ -70,6 +73,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> =
     Permission.NOTICE_READ,
     Permission.NOTICE_MANAGE,
     Permission.ANALYTICS_READ,
+    Permission.EMAIL_READ,
+    Permission.EMAIL_SEND,
+    Permission.EMAIL_SEND_ALL,
   ],
   CS: [
     Permission.DASHBOARD_READ,
@@ -81,6 +87,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> =
     Permission.SCHEDULE_READ,
     Permission.NOTICE_READ,
     Permission.NOTICE_MANAGE,
+    Permission.EMAIL_READ,
+    Permission.EMAIL_SEND,
   ],
   VIEWER: [
     Permission.DASHBOARD_READ,
@@ -92,6 +100,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> =
     Permission.SCHEDULE_READ,
     Permission.NOTICE_READ,
     Permission.ANALYTICS_READ,
+    Permission.EMAIL_READ,
   ],
 };
 

@@ -856,3 +856,12 @@ API 변경 없음. 화면 placeholder(ComingSoon) 전부 실제 화면으로 교
 - 사용자 결정: 로그인 화면 → 메뉴 투어 순으로 Live2D 캐릭터 제거. 투어는 글로만 안내
 - 함께 정리: `GuideCharacter.tsx`·`live2d-stage.ts`, `pixi.js`·`pixi-live2d-display-lipsyncpatch`, 운영 Compose 의 `./live2d` 볼륨, nginx `/live2d/` 경로, `docs/live2d.md`
 - 서버 `/opt/game-admin/live2d` 폴더와 로컬 `apps/web/public/live2d/` 는 더 쓰지 않음 (직접 삭제)
+
+### 이메일 발송 (2026-11-26)
+
+- 사용자 결정: 푸시 제외, 이메일은 무료 SMTP 로 실제 발송. 체험 계정: 회원 대상은 가상 발송, 주소 직접 입력 1건은 실제 발송(문구 자유 + 횟수 제한)
+- 회원 주소가 가상이라 실제 발송은 "주소 직접 입력"과 허용 목록 주소만 — 나머지는 가상 발송 기록 (반송으로 SMTP 계정이 막히는 것 방지)
+- 보안: 주소 직접 입력은 웹 전용(MCP 403 — AI 를 통한 데이터 유출 통로 차단), 체험 계정은 링크 금지·IP·주소·일일 한도, 하루 실제 발송 상한(fail-closed)
+- 광고성: (광고) 표기·수신 동의·야간 동의 (정보통신망법 참고, 법무 검토는 범위 밖)
+- 처리: 즉시 발송은 API 백그라운드, 예약·복구는 Worker 1분 주기. 조건부 UPDATE 로 한 곳만 처리, `UK(campaign_id,user_id)` 로 재시작 안전
+- 마이그레이션 0009, 패키지 nodemailer

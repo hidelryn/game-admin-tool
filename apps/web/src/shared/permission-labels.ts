@@ -29,6 +29,9 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   'notice:read': '공지 조회',
   'notice:manage': '공지 관리',
   'analytics:read': '유저 분석 조회',
+  'email:read': '이메일 기록 조회',
+  'email:send': '이메일 발송',
+  'email:send_all': '이메일 전체 발송',
 };
 
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
@@ -36,6 +39,7 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
   { label: '회원', permissions: ['user:read', 'user:read_pii', 'user:suspend'] },
   { label: '재화', permissions: ['currency:read', 'currency:grant', 'currency:deduct'] },
   { label: '우편', permissions: ['mail:read', 'mail:send', 'mail:send_all'] },
+  { label: '이메일', permissions: ['email:read', 'email:send', 'email:send_all'] },
   { label: '랭킹', permissions: ['ranking:read', 'ranking:manage'] },
   { label: '스케줄', permissions: ['schedule:read', 'schedule:manage'] },
   { label: '점검·공지', permissions: ['maintenance:manage', 'notice:read', 'notice:manage'] },

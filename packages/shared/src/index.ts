@@ -17,3 +17,4 @@ export * from './schemas/live-notices.js';
 export * from './schemas/dashboard.js';
 export * from './schemas/internal-game.js';
 export * from './schemas/analytics.js';
+export * from './schemas/emails.js';

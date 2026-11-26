@@ -47,6 +47,9 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   NOTICE_UPDATE: '공지 수정',
   NOTICE_HIDE: '공지 내리기',
   DEMO_RESET: '체험 데이터 초기화',
+  EMAIL_SEND: '이메일 발송',
+  EMAIL_SEND_ALL: '이메일 대량 발송',
+  EMAIL_CANCEL: '이메일 예약 취소',
 };
 
 /** 필터 드롭다운용 묶음 */
@@ -58,6 +61,7 @@ export const AUDIT_ACTION_GROUPS: { label: string; actions: AuditAction[] }[] = 
   { label: '회원', actions: ['USER_PII_VIEW', 'USER_SUSPEND', 'USER_UNSUSPEND'] },
   { label: '재화', actions: ['CURRENCY_GRANT', 'CURRENCY_DEDUCT'] },
   { label: '우편', actions: ['MAIL_SEND', 'MAIL_SEND_ALL', 'MAIL_CANCEL'] },
+  { label: '이메일', actions: ['EMAIL_SEND', 'EMAIL_SEND_ALL', 'EMAIL_CANCEL'] },
   {
     label: '랭킹',
     actions: [
@@ -122,6 +126,7 @@ export const AUDIT_TARGET_LABEL: Record<AuditTargetType, string> = {
   ASSET: '이미지',
   MAINTENANCE: '점검',
   NOTICE: '공지',
+  EMAIL_CAMPAIGN: '이메일',
 };
 
 /** 대상 → 화면 경로 (없으면 링크 없음) */
@@ -132,6 +137,8 @@ export function auditTargetPath(type: string | null, id: string | null): string 
       return `/users/${encodeURIComponent(id)}`;
     case 'MAIL':
       return `/mails/${id}`;
+    case 'EMAIL_CAMPAIGN':
+      return `/emails/${id}`;
     case 'RANKING_SEASON':
       return `/rankings?season=${id}`;
     case 'ADMIN':
