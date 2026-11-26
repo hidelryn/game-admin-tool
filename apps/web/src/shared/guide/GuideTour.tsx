@@ -16,6 +16,7 @@ interface Stop {
 /** 투어 순서 — 권한이 없는 메뉴는 건너뛴다 */
 const STOPS: Stop[] = [
   {
+    selector: '[data-tour="tour-button"]',
     title: '백오피스 둘러보기',
     text: '게임 운영 백오피스를 한 바퀴 안내해 드릴게요. 언제든 위의 "둘러보기"로 다시 볼 수 있어요.',
   },
@@ -99,7 +100,8 @@ export function GuideTour({ open, onClose }: { open: boolean; onClose(): void })
     return list.map((s, i): Step => ({
       title: s.title,
       description: <Typography.Paragraph style={{ margin: 0 }}>{s.text}</Typography.Paragraph>,
-      placement: s.key ? 'right' : 'bottom',
+      // 메뉴는 오른쪽, 상단 '둘러보기' 버튼은 아래 왼쪽으로 펼침 (화면 밖으로 안 나가게)
+      placement: s.key ? 'right' : 'bottomRight',
       // 요소를 못 찾으면(메뉴 접힘 등) 화면 가운데에 띄운다
       target: (s.key
         ? menuTarget(s.key)
