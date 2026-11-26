@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Flex, Tour, Typography, type TourProps } from 'antd';
 import { Permission } from '@game-admin/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { GUIDE_NAME, GuideCharacter, type GuideExpression } from './GuideCharacter';
+import { GUIDE_CREDIT, GUIDE_NAME, GuideCharacter, type GuideExpression } from './GuideCharacter';
 
 interface Stop {
   /** 메뉴 키(경로). 없으면 화면 가운데 */
@@ -108,7 +108,15 @@ export function GuideTour({ open, onClose }: { open: boolean; onClose(): void })
       description: (
         <Flex gap={12} align="center">
           <GuideCharacter expression={s.expression ?? 'normal'} size={110} />
-          <Typography.Paragraph style={{ margin: 0 }}>{s.text}</Typography.Paragraph>
+          <Flex vertical gap={4}>
+            <Typography.Paragraph style={{ margin: 0 }}>{s.text}</Typography.Paragraph>
+            {i === 0 && (
+              // Live2D 샘플 모델 저작권 표기 (로그인 화면에서 캐릭터를 뺀 뒤로는 투어에서 표시)
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                {GUIDE_CREDIT}
+              </Typography.Text>
+            )}
+          </Flex>
         </Flex>
       ),
       placement: s.key ? 'right' : 'bottom',

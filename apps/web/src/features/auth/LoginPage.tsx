@@ -8,12 +8,6 @@ import type { DemoInfo } from '@game-admin/shared';
 import { useAuth } from '../../shared/auth/AuthProvider';
 import { ApiError, api } from '../../shared/api/client';
 import { safeReturnPath } from '../../shared/auth/return-path';
-import {
-  GUIDE_CREDIT,
-  GUIDE_NAME,
-  GuideCharacter,
-  SpeechBubble,
-} from '../../shared/guide/GuideCharacter';
 
 interface LoginValues {
   email: string;
@@ -64,23 +58,6 @@ export function LoginPage() {
         gap={48}
         style={{ margin: 'auto', padding: '32px 16px', maxWidth: 1080, width: '100%' }}
       >
-        {/* 소개 */}
-        <Flex vertical gap={16} style={{ flex: '1 1 420px', maxWidth: 520 }}>
-          <Flex align="flex-end" gap={8}>
-            <GuideCharacter expression={account ? 'wink' : 'smile'} size={340} />
-            <SpeechBubble style={{ marginBottom: 200, maxWidth: 240 }}>
-              어서 오세요! 안내 담당 <b>{GUIDE_NAME}</b>예요.
-              <br />
-              {account
-                ? '오른쪽 체험 계정으로 들어오면 제가 메뉴를 하나씩 안내해 드릴게요.'
-                : '게임 운영자를 위한 백오피스에 오신 걸 환영해요.'}
-            </SpeechBubble>
-          </Flex>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {GUIDE_CREDIT}
-          </Typography.Text>
-        </Flex>
-
         {/* 로그인 */}
         <Flex vertical gap={16} style={{ flex: '0 1 380px', width: 380, maxWidth: '100%' }}>
           <Card>
