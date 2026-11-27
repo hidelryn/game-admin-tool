@@ -115,6 +115,20 @@ const EnvSchema = z
     /** 체험 계정 주소 직접 입력 발송: 하루 전체 / IP 당 시간당 */
     DEMO_EMAIL_DAILY_LIMIT: z.coerce.number().int().min(0).max(1_000).default(50),
     DEMO_EMAIL_PER_IP_HOUR: z.coerce.number().int().min(1).max(100).default(3),
+
+    // ── AI 어시스턴트 (docs/ai-assistant.md) — 키가 없으면 패널에 "설정 안 됨" ──
+    ANTHROPIC_API_KEY: z
+      .string()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    ASSISTANT_MODEL: z.string().trim().min(1).default('claude-haiku-5-5'),
+    /** 서버 전체 하루 질문 수 (비용 상한) */
+    ASSISTANT_DAILY_LIMIT: z.coerce.number().int().min(0).max(100_000).default(500),
+    /** 운영자 한 명 시간당 질문 수 */
+    ASSISTANT_PER_ADMIN_HOUR: z.coerce.number().int().min(1).max(1_000).default(30),
+    /** 체험 계정: 하루 전체 / IP 당 하루 */
+    DEMO_ASSISTANT_DAILY_LIMIT: z.coerce.number().int().min(0).max(10_000).default(100),
+    DEMO_ASSISTANT_PER_IP_DAY: z.coerce.number().int().min(1).max(1_000).default(10),
   })
   .superRefine((v, ctx) => {
     if (v.DEMO_MODE && !passwordPolicySchema.safeParse(v.DEMO_ACCOUNT_PASSWORD).success) {

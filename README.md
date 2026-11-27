@@ -2,7 +2,7 @@
 
 게임 운영자가 **웹 백오피스**와 **AI 클라이언트(MCP)** 양쪽에서 같은 운영 기능(회원 관리, 재화 지급·회수, 우편, 랭킹, 운영 로그)을 안전하게 사용할 수 있도록 만든 포트폴리오 프로젝트입니다.
 
-> 현재 상태: **배포 완료** — https://game-admin-delryn.duckdns.org (체험 계정은 로그인 화면에 공개, docs/deployment.md). API 커버리지 92% — API·Worker·시뮬레이터, 웹 백오피스(회원·재화·우편·이메일·랭킹·스케줄·점검/공지·운영 로그·대시보드·유저 분석), MCP 서버(Tool 23개)
+> 현재 상태: **배포 완료** — https://game-admin-delryn.duckdns.org (체험 계정은 로그인 화면에 공개, docs/deployment.md). API 커버리지 92% — API·Worker·시뮬레이터, 웹 백오피스(회원·재화·우편·이메일·랭킹·스케줄·점검/공지·운영 로그·대시보드·유저 분석·AI 어시스턴트), MCP 서버(Tool 23개)
 
 ## 핵심 포인트
 
@@ -27,6 +27,7 @@ Node.js · TypeScript · Express · MySQL · Redis · React · Vite · MCP TypeS
 | [MCP Tool](docs/mcp-tools.md) | Tool 명세 |
 | [테스트](docs/testing.md) | 테스트 전략·실행 방법·결과 |
 | [이메일 발송](docs/email.md) | 실제 발송(무료 SMTP)·가상 발송, 수신 동의·야간 제한, 체험 계정 제한 |
+| [AI 어시스턴트](docs/ai-assistant.md) | 자연어 질문 → AI 가 조회 기능을 골라 데이터 조회 → 요약·차트 (조회 전용·권한 상속·차트 숫자 검증) |
 | [유저 분석](docs/analytics.md) | 이탈 구간·리텐션·과금·재화 소비처, 가상 플레이 모델 |
 | [체험 모드](docs/demo-mode.md) | 공개 체험 계정, 매일 초기화, 메뉴 투어 |
 | [배포](docs/deployment.md) | CI(GitHub Actions)·이미지(GHCR)·EC2 수동 배포·백업 |

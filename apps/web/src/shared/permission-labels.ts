@@ -32,6 +32,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   'email:read': '이메일 기록 조회',
   'email:send': '이메일 발송',
   'email:send_all': '이메일 전체 발송',
+  'assistant:use': 'AI 어시스턴트',
 };
 
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
@@ -45,6 +46,6 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
   { label: '점검·공지', permissions: ['maintenance:manage', 'notice:read', 'notice:manage'] },
   {
     label: '운영',
-    permissions: ['audit:read', 'admin:manage', 'token:manage_own'],
+    permissions: ['audit:read', 'admin:manage', 'token:manage_own', 'assistant:use'],
   },
 ];

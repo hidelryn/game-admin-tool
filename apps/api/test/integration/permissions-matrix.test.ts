@@ -74,6 +74,8 @@ const ROUTES: [Method, string, Permission | null][] = [
   ['get', '/emails/999999/deliveries', Permission.EMAIL_READ],
   ['post', '/emails/preview', Permission.EMAIL_SEND],
   ['post', '/emails/render', Permission.EMAIL_SEND],
+  ['get', '/assistant/status', Permission.ASSISTANT_USE],
+  ['post', '/assistant/chat', Permission.ASSISTANT_USE],
   ['post', '/emails', Permission.EMAIL_SEND],
   ['post', '/emails/999999/cancel', Permission.EMAIL_SEND],
   // 유저 분석

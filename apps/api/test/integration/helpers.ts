@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createFakeMailer } from '../../src/infra/mail/mailer.js';
+import { createScriptedLlm } from '../../src/infra/llm/llm-client.js';
 import { and, eq } from 'drizzle-orm';
 import { expect, inject } from 'vitest';
 import request from 'supertest';
@@ -69,6 +70,7 @@ export async function createTestContext(
     assetStorage: createMemoryAssetStorage(),
     mailer,
     emailAutoDispatch: false,
+    llm: createScriptedLlm(),
   };
   const hasher = createPasswordHasher({ memoryCost: 4096, timeCost: 2 });
   const passwordHash = await hasher.hash(TEST_PASSWORD);

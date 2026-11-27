@@ -208,6 +208,15 @@ CS 역할처럼 "본인 작업만" 조회 가능한 경우, 서비스 계층에�
 | POST | `/emails` | 발송 `{ target: USERS\|ALL\|ADDRESS, subject, body, isAd, scheduledAt?, reason }` — 전체·100명↑ L3(웹 전용), 주소 직접 입력은 웹 전용 | `email:send` (+ 전체 `email:send_all`) |
 | POST | `/emails/:id/cancel` | 예약 취소 | `email:send` |
 
+### 2.10-3 AI 어시스턴트 (assistant) — docs/ai-assistant.md
+
+조회 전용·웹 전용 (`assistant:use` 는 API 토큰에 줄 수 없음)
+
+| Method | Path | 설명 | 권한 |
+| --- | --- | --- | --- |
+| GET | `/assistant/status` | 설정 여부·모델·이 운영자가 쓸 수 있는 도구·한도 | `assistant:use` |
+| POST | `/assistant/chat` | `{ messages: [{ role: user\|assistant, content }] }` (마지막은 질문, 1,000자) → `application/x-ndjson` 스트림: `tool`·`tool_done`·`answer{text,charts}`·`error`·`done{usage}`. 한도 초과 429, 키 미설정 503 (스트리밍 전 JSON) | `assistant:use` |
+
 ### 2.11 시스템
 
 | Method | Path | 설명 | 권한 |

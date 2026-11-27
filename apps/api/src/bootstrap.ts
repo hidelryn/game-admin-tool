@@ -45,6 +45,9 @@ import { createMailer, type Mailer } from './infra/mail/mailer.js';
 import { createEmailService } from './modules/emails/email.service.js';
 import { emailsRouter } from './modules/emails/emails.router.js';
 import { demoRouter } from './modules/demo/demo.router.js';
+import { createAnthropicLlm, type LlmClient } from './infra/llm/llm-client.js';
+import { createAssistantService } from './modules/assistant/assistant.service.js';
+import { assistantRouter } from './modules/assistant/assistant.router.js';
 import { schedulesRouter } from './modules/schedules/schedules.router.js';
 import { createMaintenanceService } from './modules/live-notices/maintenance.service.js';
 import { createNoticeService } from './modules/live-notices/notice.service.js';
@@ -61,6 +64,8 @@ export interface AppContext {
   mailer?: Mailer;
   /** 즉시 이메일 발송을 요청 직후 백그라운드 처리 (기본 true, 테스트는 false) */
   emailAutoDispatch?: boolean;
+  /** AI 어시스턴트 LLM. 없으면 env(ANTHROPIC_API_KEY)로 만든다 — 테스트는 정해진 응답을 넣는다 */
+  llm?: LlmClient;
 }
 
 /**
@@ -115,6 +120,20 @@ export function buildServices(ctx: AppContext) {
     tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
   });
   const noticeService = createNoticeService({ db });
+  const analyticsService = createAnalyticsService({
+    db,
+    redis: ctx.redis,
+    logger,
+    tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
+  });
+  const auditService = createAuditService({ db });
+  const dashboardService = createDashboardService({
+    db,
+    redis: ctx.redis,
+    logger,
+    tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
+  });
+  const userService = createUserService({ db, confirmation });
 
   return {
     authenticate,
@@ -126,7 +145,7 @@ export function buildServices(ctx: AppContext) {
       isDemo: (email) => isDemoEmail(env, email),
       demoExpiresBy: (now) => (env.DEMO_DAILY_RESET ? nextResetAt(now) : null),
     }),
-    userService: createUserService({ db, confirmation }),
+    userService,
     currencyService: createCurrencyService({ db, confirmation }),
     mailService,
     assetService,
@@ -145,18 +164,19 @@ export function buildServices(ctx: AppContext) {
       isDemo: (email) => isDemoEmail(env, email),
       autoDispatch: ctx.emailAutoDispatch,
     }),
-    analyticsService: createAnalyticsService({
+    analyticsService,
+    auditService,
+    dashboardService,
+    assistantService: createAssistantService({
       db,
       redis: ctx.redis,
       logger,
-      tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
-    }),
-    auditService: createAuditService({ db }),
-    dashboardService: createDashboardService({
-      db,
-      redis: ctx.redis,
-      logger,
-      tzOffsetMin: env.STAT_TZ_OFFSET_MINUTES,
+      env,
+      llm:
+        ctx.llm ??
+        createAnthropicLlm({ apiKey: env.ANTHROPIC_API_KEY, model: env.ASSISTANT_MODEL }),
+      tools: { dashboardService, analyticsService, userService, auditService },
+      isDemo: (email) => isDemoEmail(env, email),
     }),
   };
 }
@@ -219,6 +239,21 @@ export function buildApp(ctx: AppContext, s: Services = buildServices(ctx)) {
       authenticate,
       demoAddressLimit: (req, res, next) =>
         req.auth && isDemoEmail(env, req.auth.email) ? demoEmailLimit(req, res, next) : next(),
+    }),
+  );
+  const demoAssistantLimit = createRateLimit({
+    redis: ctx.redis,
+    logger,
+    name: 'demo-assistant',
+    limit: env.DEMO_ASSISTANT_PER_IP_DAY,
+    windowSec: 86_400,
+  });
+  api.use(
+    assistantRouter({
+      assistantService: s.assistantService,
+      authenticate,
+      demoLimit: (req, res, next) =>
+        req.auth && isDemoEmail(env, req.auth.email) ? demoAssistantLimit(req, res, next) : next(),
     }),
   );
   api.use(assetsRouter({ assetService: s.assetService, authenticate }));

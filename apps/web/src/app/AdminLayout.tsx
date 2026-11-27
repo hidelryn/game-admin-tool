@@ -1,4 +1,4 @@
-import { Avatar, Button, Dropdown, Flex, Layout, Menu, Tag, Typography } from 'antd';
+import { Avatar, Button, Dropdown, Flex, Grid, Layout, Menu, Tag, Typography } from 'antd';
 import {
   AuditOutlined,
   CalendarOutlined,
@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   MailOutlined,
   QuestionCircleOutlined,
+  RobotOutlined,
   NotificationOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -23,6 +24,7 @@ import { ROLE_LABEL } from '../shared/permission-labels';
 import { useAuth } from '../shared/auth/AuthProvider';
 import { MaintenanceBanner } from '../features/live-notices/MaintenanceBanner';
 import { GuideTour, markTourSeen, shouldAutoStartTour } from '../shared/guide/GuideTour';
+import { AssistantPanel } from '../features/assistant/AssistantPanel';
 
 const { Sider, Header, Content } = Layout;
 
@@ -96,6 +98,9 @@ export function AdminLayout() {
   );
   const selected = items.find((i) => pathname === i.key || pathname.startsWith(`${i.key}/`))?.key;
   const [tourOpen, setTourOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  // 넓은 화면은 본문 옆에 나란히, 좁은 화면은 본문 위에 겹쳐서
+  const wide = Grid.useBreakpoint().xl ?? true;
   // 체험 계정은 처음 들어왔을 때 안내를 자동으로 한 번 (메뉴가 그려진 뒤)
   useEffect(() => {
     if (!me?.isDemo || !shouldAutoStartTour(me.id)) return;
@@ -108,7 +113,7 @@ export function AdminLayout() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout hasSider style={{ minHeight: '100vh' }}>
       <Sider width={220} theme="dark" breakpoint="lg" collapsedWidth={64}>
         <div style={{ padding: '20px 24px' }}>
           <Typography.Text strong style={{ color: '#fff', fontSize: 16 }}>
@@ -132,6 +137,15 @@ export function AdminLayout() {
               <Tag color="blue" style={{ marginInlineEnd: 0 }}>
                 체험 계정 · 매일 04:00 초기화
               </Tag>
+            )}
+            {can(Permission.ASSISTANT_USE) && (
+              <Button
+                type={assistantOpen ? 'primary' : 'text'}
+                icon={<RobotOutlined />}
+                onClick={() => setAssistantOpen((v) => !v)}
+              >
+                AI 어시스턴트
+              </Button>
             )}
             <Button
               type="text"
@@ -182,6 +196,24 @@ export function AdminLayout() {
           <Outlet />
         </Content>
       </Layout>
+      {assistantOpen && (
+        <div
+          style={
+            wide
+              ? { alignSelf: 'flex-start', position: 'sticky', top: 0, zIndex: 10 }
+              : {
+                  position: 'fixed',
+                  top: 0,
+                  right: 0,
+                  zIndex: 1000,
+                  maxWidth: '100vw',
+                  boxShadow: '-4px 0 16px rgba(0,0,0,0.12)',
+                }
+          }
+        >
+          <AssistantPanel onClose={() => setAssistantOpen(false)} />
+        </div>
+      )}
     </Layout>
   );
 }

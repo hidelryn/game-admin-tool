@@ -204,6 +204,57 @@ export async function uploadFile<T>(path: string, file: File, retry = true): Pro
   );
 }
 
+/**
+ * 줄 단위 JSON(NDJSON) 스트리밍 POST — AI 어시스턴트 진행 상황 수신용
+ * 스트리밍 시작 전 오류(권한·한도)는 일반 JSON 오류라 ApiError 로 던진다
+ */
+export async function postStream<E>(
+  path: string,
+  body: unknown,
+  onEvent: (e: E) => void,
+  signal?: AbortSignal,
+  retry = true,
+): Promise<void> {
+  const res = await fetch(`/api/v1${path}`, {
+    method: 'POST',
+    headers: {
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      'Content-Type': 'application/json',
+      Accept: 'application/x-ndjson',
+    },
+    credentials: 'include',
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (res.status === 401 && retry && (await refreshAccessToken()))
+    return postStream(path, body, onEvent, signal, false);
+  if (!res.ok || !res.body) {
+    const json = (await res.json().catch(() => null)) as Partial<ApiFailure> | null;
+    const err = json?.error;
+    throw new ApiError(
+      res.status,
+      err?.code ?? `HTTP_${res.status}`,
+      err?.message ?? `요청에 실패했습니다 (${res.status})`,
+      err?.details,
+      err?.requestId,
+    );
+  }
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    let nl: number;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (line) onEvent(JSON.parse(line) as E);
+    }
+  }
+  if (buf.trim()) onEvent(JSON.parse(buf) as E);
+}
+
 export const api = {
   get: <T>(path: string, query?: Record<string, unknown>) => apiRequest<T>('GET', path, { query }),
   post: <T>(path: string, body?: unknown, opts: Omit<RequestOptions, 'body'> = {}) =>

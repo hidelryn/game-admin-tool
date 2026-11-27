@@ -50,6 +50,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   EMAIL_SEND: '이메일 발송',
   EMAIL_SEND_ALL: '이메일 대량 발송',
   EMAIL_CANCEL: '이메일 예약 취소',
+  ASSISTANT_QUERY: 'AI 어시스턴트 질문',
 };
 
 /** 필터 드롭다운용 묶음 */
@@ -62,6 +63,7 @@ export const AUDIT_ACTION_GROUPS: { label: string; actions: AuditAction[] }[] = 
   { label: '재화', actions: ['CURRENCY_GRANT', 'CURRENCY_DEDUCT'] },
   { label: '우편', actions: ['MAIL_SEND', 'MAIL_SEND_ALL', 'MAIL_CANCEL'] },
   { label: '이메일', actions: ['EMAIL_SEND', 'EMAIL_SEND_ALL', 'EMAIL_CANCEL'] },
+  { label: 'AI 어시스턴트', actions: ['ASSISTANT_QUERY'] },
   {
     label: '랭킹',
     actions: [

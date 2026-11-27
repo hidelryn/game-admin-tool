@@ -26,6 +26,8 @@ export const Permission = {
   EMAIL_READ: 'email:read',
   EMAIL_SEND: 'email:send',
   EMAIL_SEND_ALL: 'email:send_all',
+  /** AI 어시스턴트 (조회 전용, 웹 전용) */
+  ASSISTANT_USE: 'assistant:use',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -51,6 +53,8 @@ export const TOKEN_FORBIDDEN_PERMISSIONS: readonly Permission[] = [
   Permission.USER_READ_PII,
   Permission.ADMIN_MANAGE,
   Permission.TOKEN_MANAGE_OWN,
+  // AI 가 AI 를 부르는 경로(비용·통제) 차단 — 웹에서 사람만
+  Permission.ASSISTANT_USE,
 ];
 
 export const TOKEN_ASSIGNABLE_PERMISSIONS: readonly Permission[] = ALL_PERMISSIONS.filter(

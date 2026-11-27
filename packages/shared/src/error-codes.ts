@@ -75,6 +75,10 @@ export const ErrorCode = {
   EMAIL_NOT_CANCELABLE: 'EMAIL_NOT_CANCELABLE',
   /** 체험 계정 메일의 링크·길이 제한 */
   EMAIL_CONTENT_NOT_ALLOWED: 'EMAIL_CONTENT_NOT_ALLOWED',
+  /** ANTHROPIC_API_KEY 미설정 */
+  ASSISTANT_NOT_CONFIGURED: 'ASSISTANT_NOT_CONFIGURED',
+  /** LLM 호출 실패 (스트리밍 중 error 이벤트) */
+  ASSISTANT_FAILED: 'ASSISTANT_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

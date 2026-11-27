@@ -54,6 +54,8 @@ export const AuditAction = {
   /** 전체·100명 이상 (L3) */
   EMAIL_SEND_ALL: 'EMAIL_SEND_ALL',
   EMAIL_CANCEL: 'EMAIL_CANCEL',
+  /** AI 어시스턴트 질문 (질문·사용 도구만 기록) */
+  ASSISTANT_QUERY: 'ASSISTANT_QUERY',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

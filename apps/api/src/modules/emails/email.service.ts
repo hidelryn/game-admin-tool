@@ -44,7 +44,7 @@ import {
 } from '../../common/errors/app-error.js';
 import { iso, isoOrNull } from '../../common/http/serialize.js';
 import { maskEmail } from '../../common/http/mask.js';
-import { statDateOf } from '../../common/time.js';
+import { floorToSecond, statDateOf } from '../../common/time.js';
 import { affectedRows, type Executor } from '../../infra/db/types.js';
 import type { RedisHandle } from '../../infra/redis/client.js';
 import type { Mailer } from '../../infra/mail/mailer.js';
@@ -84,8 +84,6 @@ const DEMO_FOOTER =
  *  2) 회원 대상이지만 주소가 EMAIL_REAL_ALLOWLIST 에 있고, 만든 운영자가 체험 계정이 아님
  * 하루 실제 발송 수는 EMAIL_DAILY_REAL_LIMIT 로 막는다 (무료 SMTP 한도 보호, Redis 장애면 보내지 않음)
  */
-const floorToSecond = (d: Date) => new Date(Math.floor(d.getTime() / 1000) * 1000);
-
 export function createEmailService(deps: {
   db: Executor;
   redis: RedisHandle;
