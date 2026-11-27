@@ -29,7 +29,7 @@ Node.js · TypeScript · Express · MySQL · Redis · React · Vite · MCP TypeS
 | [이메일 발송](docs/email.md) | 실제 발송(무료 SMTP)·가상 발송, 수신 동의·야간 제한, 체험 계정 제한 |
 | [AI 어시스턴트](docs/ai-assistant.md) | 자연어 질문 → AI 가 조회 기능을 골라 데이터 조회 → 요약·차트 (조회 전용·권한 상속·차트 숫자 검증) |
 | [유저 분석](docs/analytics.md) | 이탈 구간·리텐션·과금·재화 소비처, 가상 플레이 모델 |
-| [체험 모드](docs/demo-mode.md) | 공개 체험 계정, 매일 초기화, 메뉴 투어 |
+| [체험 모드](docs/demo-mode.md) | 공개 체험 계정, 매일 초기화 |
 | [배포](docs/deployment.md) | CI(GitHub Actions)·이미지(GHCR)·EC2 수동 배포·백업 |
 | [개발 로그](docs/development-log.md) | 진행 기록, 결정 사항, 일정 |
 | 배포 | `docs/deployment.md` — Phase 7에서 작성 |

@@ -874,3 +874,9 @@ API 변경 없음. 화면 placeholder(ComingSoon) 전부 실제 화면으로 교
 - 차트: AI 는 차트 정의(JSON)만, 웹이 recharts 로 그림. 차트 숫자가 조회 결과에 없으면 거부(지어낸 값 방지)
 - 비용: 운영자 시간당·서버 하루·체험 계정 하루·IP 하루 한도 (Redis, fail-closed), 질문당 LLM 최대 6회
 - 의존성 추가 없음 (Anthropic Messages API 를 fetch 로 호출). 테스트는 정해진 응답을 돌려주는 가짜 LLM
+
+### 메뉴 투어("둘러보기") 제거 (2026-11-27)
+
+- 사용자 결정: 상단 "둘러보기" 버튼과 antd Tour 메뉴 투어 제거 (체험 계정 첫 로그인 자동 시작 포함)
+- 삭제: `apps/web/src/shared/guide/GuideTour.tsx` (폴더째), `AdminLayout.tsx` 의 버튼·자동 시작·`data-tour` 표시
+- antd 내장 컴포넌트라 지울 패키지는 없음. 브라우저에 남은 `ga:tour-seen:<id>` 값은 더 읽지 않음 (무해)

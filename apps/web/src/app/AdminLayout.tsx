@@ -10,20 +10,18 @@ import {
   KeyOutlined,
   LogoutOutlined,
   MailOutlined,
-  QuestionCircleOutlined,
   RobotOutlined,
   NotificationOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Permission } from '@game-admin/shared';
 import { ROLE_LABEL } from '../shared/permission-labels';
 import { useAuth } from '../shared/auth/AuthProvider';
 import { MaintenanceBanner } from '../features/live-notices/MaintenanceBanner';
-import { GuideTour, markTourSeen, shouldAutoStartTour } from '../shared/guide/GuideTour';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 
 const { Sider, Header, Content } = Layout;
@@ -97,20 +95,9 @@ export function AdminLayout() {
     ({ key, label, icon }) => ({ key, icon, label }),
   );
   const selected = items.find((i) => pathname === i.key || pathname.startsWith(`${i.key}/`))?.key;
-  const [tourOpen, setTourOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   // 넓은 화면은 본문 옆에 나란히, 좁은 화면은 본문 위에 겹쳐서
   const wide = Grid.useBreakpoint().xl ?? true;
-  // 체험 계정은 처음 들어왔을 때 안내를 자동으로 한 번 (메뉴가 그려진 뒤)
-  useEffect(() => {
-    if (!me?.isDemo || !shouldAutoStartTour(me.id)) return;
-    const timer = setTimeout(() => setTourOpen(true), 600);
-    return () => clearTimeout(timer);
-  }, [me?.id, me?.isDemo]);
-  const closeTour = () => {
-    setTourOpen(false);
-    if (me) markTourSeen(me.id);
-  };
 
   return (
     <Layout hasSider style={{ minHeight: '100vh' }}>
@@ -147,14 +134,6 @@ export function AdminLayout() {
                 AI 어시스턴트
               </Button>
             )}
-            <Button
-              type="text"
-              icon={<QuestionCircleOutlined />}
-              data-tour="tour-button"
-              onClick={() => setTourOpen(true)}
-            >
-              둘러보기
-            </Button>
             <Dropdown
               menu={{
                 items: [
@@ -191,7 +170,6 @@ export function AdminLayout() {
           </Flex>
         </Header>
         <MaintenanceBanner />
-        <GuideTour open={tourOpen} onClose={closeTour} />
         <Content style={{ padding: 24 }}>
           <Outlet />
         </Content>
